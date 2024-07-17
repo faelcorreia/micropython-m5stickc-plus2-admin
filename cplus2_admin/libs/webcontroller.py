@@ -73,6 +73,7 @@ class WebController:
         self.micropyserver.add_route("/get_temperature", self.get_temperature)
         self.micropyserver.add_route("/get_gyro", self.get_gyro)
         self.micropyserver.add_route("/get_acceleration", self.get_acceleration)
+        self.micropyserver.add_route("/set_rtc_time", self.set_rtc_time, method="POST")
         self.micropyserver.add_route("/get_rtc_time", self.get_rtc_time)
 
         # Create data folder
@@ -209,6 +210,11 @@ class WebController:
                 }
             )
         )
+        
+    def set_rtc_time(self, request):
+        rtc_time = json.loads(request["body"])
+        self.rtc.datetime((rtc_time["year"], rtc_time["month"], rtc_time["day"], rtc_time["hour"], rtc_time["minute"], rtc_time["second"], rtc_time["weekday"]))
+        self.micropyserver.send(self.DEFAULT_MESSAGE)
 
     def get_rtc_time(self, request):
         del request
