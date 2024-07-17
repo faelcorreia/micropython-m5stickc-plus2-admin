@@ -2,7 +2,9 @@
 
 An admin web page for M5StickC Plus2 with Micropython.
 
-Used this as a base for your projects.
+Use this as a base for your projects.
+
+![Screenshot of Micropython M5StickC Plus2 Admin](image.png)
 
 ## Usage
 
