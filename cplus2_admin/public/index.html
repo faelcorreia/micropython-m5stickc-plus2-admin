@@ -123,10 +123,10 @@
 <body onload="onLoad()">
     <div>
         <h1>WLAN</h1>
-        <h2>AP</h2>
+        <h2>> AP</h2>
         <span id="ap_info"></span>
         <br>
-        <h2>Station</h2>
+        <h2>> Station</h2>
         <span id="sta_info"></span>
         <br>
         <button onclick="getWLANs()">List available WLANs</button>
@@ -139,22 +139,22 @@
     <div>
         <h1>LCD</h1>
 
-        <h2>Backlight</h2>
+        <h2>> Backlight</h2>
         <button onclick="toggleBacklight()">Toggle backlight</button>
 
-        <h2>Background color</h2>
-        R <input id="bg_r" type="number" min="1" max="255">
-        G <input id="bg_g" type="number" min="1" max="255">
-        B <input id="bg_b" type="number" min="1" max="255">
+        <h2>> Background color</h2>
+        R <input id="bg_r" type="number" min="1" max="255" value="0">
+        G <input id="bg_g" type="number" min="1" max="255" value="0">
+        B <input id="bg_b" type="number" min="1" max="255" value="0">
         <button onclick="setBackgroundColor()">Set</button>
 
-        <h2>Foreground color</h2>
-        R <input id="fg_r" type="number" min="1" max="255">
-        G <input id="fg_g" type="number" min="1" max="255">
-        B <input id="fg_b" type="number" min="1" max="255">
+        <h2>> Foreground color</h2>
+        R <input id="fg_r" type="number" min="1" max="255" value="0">
+        G <input id="fg_g" type="number" min="1" max="255" value="0">
+        B <input id="fg_b" type="number" min="1" max="255" value="0">
         <button onclick="setForegroundColor()">Set</button>
 
-        <h2>Text</h2>
+        <h2>> Text</h2>
         Text <input id="text" type="text">
         <button onclick="setText()">Set</button>
         <br><br>

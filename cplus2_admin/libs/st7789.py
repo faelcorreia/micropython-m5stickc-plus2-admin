@@ -32,10 +32,10 @@ Driver for the ST7789 display controller.
 
 import sys
 
-import framebuf
-import ustruct
-from micropython import const
-from utime import sleep_ms
+import framebuf # type: ignore
+import ustruct # type: ignore
+from micropython import const # type: ignore
+from utime import sleep_ms # type: ignore
 
 # commands
 _ST77XX_NOP = const(0x00)
@@ -218,7 +218,7 @@ class ST7789:
         self.write(_ST7789_MADCTL, bytes([value]))
 
     def _encode_pos(self, x, y):
-        """Encode a postion into bytes."""
+        """Encode a position into bytes."""
         return ustruct.pack(">HH", x, y)
 
     def _encode_pixel(self, color):

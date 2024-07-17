@@ -1,13 +1,34 @@
+# Copyright (c) 2024 Rafael Correia
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+#
+# https://github.com/faelcorreia/micropython-m5stickc-plus2-admin
+
 from libs.micropyserver import MicroPyServer
 from libs.wlancontroller import WLANController
 import binascii
 import json
-from machine import Pin
+from machine import Pin # type: ignore
 from libs.st7789 import ST7789
 from libs.mpu6886 import MPU6886
 from libs.pcf8563 import PCF8563
 import libs.colors as colors
-import random
 import os
 
 
@@ -104,30 +125,29 @@ class WebController:
             self.bg_color,
         )
 
-    def parse_http_request(self, request_text):
-        headers_section, body = request_text.split("\r\n\r\n", 1)
-        lines = headers_section.split("\r\n")
-        request_line = lines[0]
-        headers = {}
-        for line in lines[1:]:
-            if line:
-                key, value = line.split(": ", 1)
-                headers[key] = value
-        return {"headers": headers, "body": body}
+    def start(self):
+        self.micropyserver.start()
 
-    def root(self, request_text):
+    def process(self):
+        self.micropyserver.process()
+
+    def root(self, request):
+        del request
         with open("public/index.html") as f:
             self.micropyserver.send(f.read())
 
-    def get_ap_info(self, request_text):
+    def get_ap_info(self, request):
+        del request
         ap_info = self.wlancontroller.get_ap_info()
         self.micropyserver.send(json.dumps(ap_info))
 
-    def get_sta_info(self, request_text):
+    def get_sta_info(self, request):
+        del request
         sta_info = self.wlancontroller.get_sta_info()
         self.micropyserver.send(json.dumps(sta_info))
 
-    def get_wlans(self, request_text):
+    def get_wlans(self, request):
+        del request
         wlans = []
         for wlan in self.wlancontroller.list_available():
             wlans.append(
@@ -141,8 +161,7 @@ class WebController:
             )
         self.micropyserver.send(json.dumps(wlans))
 
-    def wlan_connect(self, request_text):
-        request = self.parse_http_request(request_text)
+    def wlan_connect(self, request):
         wlan_data = json.loads(request["body"])
         try:
             self.wlancontroller.disconnect()
@@ -154,28 +173,26 @@ class WebController:
             print(e)
             self.micropyserver.send(str(e))
 
-    def toggle_backlight(self, request_text):
+    def toggle_backlight(self, request):
+        del request
         if self.backlight.value() == 1:
             self.backlight.off()
         else:
             self.backlight.on()
         self.micropyserver.send(self.DEFAULT_MESSAGE)
 
-    def set_background_color(self, request_text):
-        request = self.parse_http_request(request_text)
+    def set_background_color(self, request):
         rgb = json.loads(request["body"])
         self.bg_color = colors.rgb565(rgb["r"], rgb["g"], rgb["b"])
         self.tft.fill(self.bg_color)
         self.micropyserver.send(self.DEFAULT_MESSAGE)
 
-    def set_foreground_color(self, request_text):
-        request = self.parse_http_request(request_text)
+    def set_foreground_color(self, request):
         rgb = json.loads(request["body"])
         self.fg_color = colors.rgb565(rgb["r"], rgb["g"], rgb["b"])
         self.micropyserver.send(self.DEFAULT_MESSAGE)
 
-    def set_text(self, request_text):
-        request = self.parse_http_request(request_text)
+    def set_text(self, request):
         text = json.loads(request["body"])["text"]
         self.tft.fill(self.bg_color)
         self.tft.text(
@@ -183,16 +200,19 @@ class WebController:
         )
         self.micropyserver.send(self.DEFAULT_MESSAGE)
 
-    def get_temperature(self, request_text):
+    def get_temperature(self, request):
+        del request
         self.micropyserver.send(json.dumps({"temperature": self.sensor.temperature()}))
 
-    def get_gyro(self, request_text):
+    def get_gyro(self, request):
+        del request
         gyro = self.sensor.gyro
         self.micropyserver.send(
             json.dumps({"gyro_x": gyro[0], "gyro_y": gyro[1], "gyro_z": gyro[2]})
         )
 
-    def get_acceleration(self, request_text):
+    def get_acceleration(self, request):
+        del request
         acceleration = self.sensor.acceleration
         self.micropyserver.send(
             json.dumps(
@@ -204,13 +224,8 @@ class WebController:
             )
         )
 
-    def start(self):
-        self.micropyserver.start()
-
-    def process(self):
-        self.micropyserver.process()
-
-    def get_rtc_time(self, request_text):
+    def get_rtc_time(self, request):
+        del request
         datetime = self.rtc.datetime()
         self.micropyserver.send(
             json.dumps(

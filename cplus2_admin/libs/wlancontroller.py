@@ -1,9 +1,33 @@
-import network
+# Copyright (c) 2024 Rafael Correia
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+#
+# https://github.com/faelcorreia/micropython-m5stickc-plus2-admin
+
+import network # type: ignore
 import time
 
 
 class WLANController:
     AP_SSID = "M5StickC"
+    CONNECT_TIMEOUT = 30
+    CONNECT_DELAY = 0.2
 
     def __init__(self) -> None:
         self.sta_if = network.WLAN(network.STA_IF)
@@ -43,23 +67,24 @@ class WLANController:
     def connect(self, ssid, password):
         if not self.sta_if.isconnected():
             self.sta_ssid = ssid
-            print("Connecting to WLAN...", end="")
+            print("Connecting to WLAN...\n")
             self.sta_if.connect(ssid, password)
-            for retry in range(200):
+            retries = self.CONNECT_TIMEOUT / self.CONNECT_DELAY
+            for _ in range(retries):
                 connected = self.sta_if.isconnected()
                 if connected:
                     break
-                time.sleep(0.2)
-                print(".", end="")
+                time.sleep(self.CONNECT_DELAY)
             if connected:
-                print("\nConnected. Network config: ", self.sta_if.ifconfig())
+                print("Connected. Network config: ", self.sta_if.ifconfig())
 
     def disconnect(self):
         if self.sta_if.isconnected():
-            print("Disconnecting...", end="")
+            print("Disconnecting from WLAN...\n")
             self.sta_if.disconnect()
-        for retry in range(200):
+        retries = self.CONNECT_TIMEOUT / self.CONNECT_DELAY
+        for _ in range(retries):
             if not self.sta_if.isconnected():
                 break
-            time.sleep(0.2)
-            print(".", end="")
+            time.sleep(self.CONNECT_DELAY)
+        print("Disconnected.")

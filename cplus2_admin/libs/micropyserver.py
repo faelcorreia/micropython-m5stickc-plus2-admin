@@ -6,6 +6,7 @@ MicroPyServer is a simple HTTP server for MicroPython projects.
 The MIT License
 
 Copyright (c) 2019 troublegum. https://github.com/troublegum/micropyserver
+Copyright (c) 2024 Rafael Correia
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +25,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
+Notable modifications:
+  - Externalized infinite loop
+  - Created request parser
 """
 import re
 import socket
@@ -63,10 +68,11 @@ class MicroPyServer(object):
                 if readable is self._sock:
                     try:
                         self._connect, address = self._sock.accept()
-                        request = self.get_request()
-                        if len(request) == 0:
+                        request_text = self.get_request()
+                        if len(request_text) == 0:
                             self._connect.close()
                             return
+                        request = self.parse_http_request(request_text)
                         if self._on_request_handler:
                             if not self._on_request_handler(request, address):
                                 return
@@ -76,10 +82,7 @@ class MicroPyServer(object):
                         else:
                             self._route_not_found(request)
                     except Exception as e:
-                        try:
-                            self._internal_error(e)
-                        except Exception:
-                            pass
+                        self._internal_error(e)
                     finally:
                         if self._connect != None:
                             self._connect.close()
@@ -90,6 +93,24 @@ class MicroPyServer(object):
         self._sock.close()
         self._sock = None
         print("Web server stop")
+        
+    def parse_http_request(self, request_text):
+        """ Parse HTTP Request """
+        headers_section, body = request_text.split("\r\n\r\n", 1)
+        lines = headers_section.split("\r\n")
+        method = re.search("^([A-Z]+)", lines[0]).group(1)
+        path = re.search("^[A-Z]+\\s+(/[-a-zA-Z0-9_.]*)", lines[0]).group(1)
+        headers = {}
+        for line in lines[1:]:
+            if line:
+                key, value = line.split(": ", 1)
+                headers[key] = value
+        return {
+            "method": method,
+            "path": path,
+            "headers": headers,
+            "body": body
+        }
 
     def add_route(self, path, handler, method="GET"):
         """ Add new route """
@@ -104,9 +125,8 @@ class MicroPyServer(object):
 
     def find_route(self, request):
         """ Find route """
-        lines = request.split("\r\n")
-        method = re.search("^([A-Z]+)", lines[0]).group(1)
-        path = re.search("^[A-Z]+\\s+(/[-a-zA-Z0-9_.]*)", lines[0]).group(1)
+        method = request["method"]
+        path = request["path"]
         for route in self._routes:
             if method != route["method"]:
                 continue

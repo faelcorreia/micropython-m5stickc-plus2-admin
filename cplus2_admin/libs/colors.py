@@ -21,7 +21,7 @@
 #
 # Based on https://github.com/devbis/st7789py_mpy
 
-from micropython import const
+from micropython import const # type: ignore
 
 BLACK = const(0x0000)
 BLUE = const(0x001F)

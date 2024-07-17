@@ -27,10 +27,10 @@ MicroPython I2C driver for MPU6886 6-axis motion tracking device
 __version__ = "0.1.0-dev"
 
 # pylint: disable=import-error
-import ustruct
-import utime
-from machine import I2C, Pin
-from micropython import const
+import ustruct # type: ignore
+import utime # type: ignore
+from machine import I2C, Pin # type: ignore
+from micropython import const # type: ignore
 # pylint: enable=import-error
 
 _CONFIG = const(0x1a)
@@ -141,7 +141,7 @@ class MPU6886:
     @property
     def temperature(self):
         """
-        Die temperature in celcius as a float.
+        Die temperature in Celsius as a float.
         """
         temp = self._register_short(_TEMP_OUT_H)
         # return ((temp - _TEMP_OFFSET) / _TEMP_SO) + _TEMP_OFFSET

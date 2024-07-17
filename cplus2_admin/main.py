@@ -1,4 +1,4 @@
-from machine import I2C, Pin, SPI, ADC
+from machine import I2C, Pin, SPI, ADC # type: ignore
 from libs.st7789 import ST7789, ColorMode_16bit
 from libs.pcf8563 import PCF8563
 from libs.mpu6886 import MPU6886, SF_G, SF_DEG_S
