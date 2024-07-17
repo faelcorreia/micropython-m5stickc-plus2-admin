@@ -22,6 +22,7 @@
 
 from libs.micropyserver import MicroPyServer
 from libs.wlancontroller import WLANController
+from libs.ledcontroller import LEDController
 import binascii
 import json
 from machine import Pin # type: ignore
@@ -41,6 +42,7 @@ class WebController:
     def __init__(
         self,
         wlancontroller: WLANController,
+        ledcontroller: LEDController,
         backlight: Pin,
         tft: ST7789,
         sensor: MPU6886,
@@ -49,6 +51,7 @@ class WebController:
         self.micropyserver = MicroPyServer()
 
         self.wlancontroller = wlancontroller
+        self.ledcontroller = ledcontroller
         self.backlight = backlight
         self.tft = tft
         self.sensor = sensor
@@ -73,6 +76,7 @@ class WebController:
         self.micropyserver.add_route("/get_temperature", self.get_temperature)
         self.micropyserver.add_route("/get_gyro", self.get_gyro)
         self.micropyserver.add_route("/get_acceleration", self.get_acceleration)
+        self.micropyserver.add_route("/toggle_led", self.toggle_led, method="POST")
         self.micropyserver.add_route("/set_rtc_time", self.set_rtc_time, method="POST")
         self.micropyserver.add_route("/get_rtc_time", self.get_rtc_time)
 
@@ -210,6 +214,11 @@ class WebController:
                 }
             )
         )
+    
+    def toggle_led(self, request):
+        del request
+        self.ledcontroller.toggle()
+        self.micropyserver.send(self.DEFAULT_MESSAGE)
         
     def set_rtc_time(self, request):
         rtc_time = json.loads(request["body"])

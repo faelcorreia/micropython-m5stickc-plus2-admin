@@ -106,6 +106,10 @@
             await doFetch("/set_text", "POST", JSON.stringify({ text: text }))
         }
 
+        async function toggleLed() {
+            await doFetch("/toggle_led", "POST", null)
+        }
+
         async function getRTCTime() {
             response = await doFetch("/get_rtc_time", "GET", null)
             rtc_time = await response.json()
@@ -179,6 +183,15 @@
             <h2># Text</h2>
             Text <input id="text" type="text">
             <button onclick="setText()">Set</button>
+            <br><br>
+        </details>
+    </div>
+    <hr />
+    <div>
+        <details>
+            <summary>LED</summary>
+            <br>
+            <button onclick="toggleLed()">Toggle led</button>
             <br><br>
         </details>
     </div>

@@ -5,6 +5,7 @@ from libs.mpu6886 import MPU6886, SF_G, SF_DEG_S
 from libs.wlancontroller import WLANController
 from libs.webcontroller import WebController
 from libs.buttoncontroller import ButtonController
+from libs.ledcontroller import LEDController
 
 
 class Admin:
@@ -64,31 +65,37 @@ class Admin:
     sensor = MPU6886(i2c, accel_sf=SF_G, gyro_sf=SF_DEG_S)
 
     def __init__(self) -> None:
+        self.create_led_controller()
         self.create_network()
         self.create_button_controllers()
 
-    def create_button_controllers(self):
-        turn_on_led = lambda: self.led.value(1)
-        turn_off_led = lambda: self.led.value(0)
+    def create_led_controller(self):
+        self.ledcontroller = LEDController(self.led)
 
+    def create_button_controllers(self):
         self.button_a_controller = ButtonController(self.button_a, "Button A")
-        self.button_a_controller.register_event("on_press", turn_on_led)
-        self.button_a_controller.register_event("on_release", turn_off_led)
+        self.button_a_controller.register_event("on_press", self.ledcontroller.on)
+        self.button_a_controller.register_event("on_release", self.ledcontroller.off)
 
         self.button_b_controller = ButtonController(self.button_b, "Button B")
-        self.button_b_controller.register_event("on_press", turn_on_led)
-        self.button_b_controller.register_event("on_release", turn_off_led)
+        self.button_b_controller.register_event("on_press", self.ledcontroller.on)
+        self.button_b_controller.register_event("on_release", self.ledcontroller.off)
 
         self.button_c_controller = ButtonController(self.button_c, "Button C")
-        self.button_c_controller.register_event("on_press", turn_on_led)
-        self.button_c_controller.register_event("on_release", turn_off_led)
+        self.button_c_controller.register_event("on_press", self.ledcontroller.on)
+        self.button_c_controller.register_event("on_release", self.ledcontroller.off)
 
     def create_network(self):
         self.wlancontroller = WLANController()
         self.wlancontroller.configure_ap()
 
         self.webcontroller = WebController(
-            self.wlancontroller, self.backlight, self.tft, self.sensor, self.rtc
+            self.wlancontroller,
+            self.ledcontroller,
+            self.backlight,
+            self.tft,
+            self.sensor,
+            self.rtc,
         )
         self.webcontroller.start()
 
