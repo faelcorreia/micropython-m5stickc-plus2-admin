@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>M5StackC Plus2 Manager</title>
+    <style>
+        body {
+            padding: 50px
+        }
+
+        body,
+        button,
+        input {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: black;
+            color: white;
+        }
+
+        button,
+        input {
+            border: 2px solid white;
+        }
+
+        button:active {
+            background-color: white;
+            color: black;
+        }
+    </style>
+    <script>
+        const headers = new Headers();
+        headers.append("Content-Type", "application/json");
+        wlans = null
+
+        async function doFetch(url, method, body) {
+            response = await fetch(url, {
+                method: method,
+                body: body,
+                headers: headers
+            })
+            if (!response.ok) {
+                throw new Error(`Response status: ${response.status}`);
+            }
+            return response
+        }
+
+        async function getWLANs() {
+            response = await doFetch("/wlans", "GET", null)
+            wlans = await response.json();
+            document.getElementById("wlans").innerText = ""
+            wlans.forEach(wlan => {
+                document.getElementById("wlans").innerHTML += `${wlan["ssid"]} (${wlan["bssid"]}) <button onclick='wlanConnect(\"${wlan["ssid"]}\")'>Connect</button><br>`
+            });
+        }
+
+        async function getApInfo() {
+            response = await doFetch("/get_ap_info", "GET", null)
+            ap_info = await response.json()
+            document.getElementById("ap_info").innerHTML = `SSID: ${ap_info["ssid"]}<br>IP: ${ap_info["ip"]}<br>Netmask: ${ap_info["netmask"]}<br>`
+        }
+
+        async function getStaInfo() {
+            response = await doFetch("/get_sta_info", "GET", null)
+            ap_info = await response.json()
+            document.getElementById("sta_info").innerHTML = `SSID: ${ap_info["ssid"]}<br>IP: ${ap_info["ip"]}<br>Netmask: ${ap_info["netmask"]}<br>`
+        }
+
+        async function wlanConnect(ssid) {
+            password = null
+            wlans.forEach(wlan => {
+                if (wlan["ssid"] == ssid) {
+                    if (wlan["is_open"] != true) {
+                        password = prompt("WLAN password:")
+                    }
+                }
+            })
+            response = await doFetch("/wlan_connect", "POST", JSON.stringify({ ssid: ssid, password: password }))
+            getStaInfo()
+            alert("Connected!")
+        }
+
+        async function toggleBacklight() {
+            await doFetch("/toggle_backlight", "POST", null)
+        }
+
+        async function setBackgroundColor() {
+            r = parseInt(document.getElementById("bg_r").value)
+            g = parseInt(document.getElementById("bg_g").value)
+            b = parseInt(document.getElementById("bg_b").value)
+            await doFetch("/set_background_color", "POST", JSON.stringify({ r: r, g: g, b: b }))
+        }
+
+        async function setForegroundColor() {
+            r = parseInt(document.getElementById("fg_r").value)
+            g = parseInt(document.getElementById("fg_g").value)
+            b = parseInt(document.getElementById("fg_b").value)
+            await doFetch("/set_foreground_color", "POST", JSON.stringify({ r: r, g: g, b: b }))
+        }
+
+        async function setText() {
+            text = document.getElementById("text").value
+            await doFetch("/set_text", "POST", JSON.stringify({ text: text }))
+        }
+
+        async function getRTCTime() {
+            response = await doFetch("/get_rtc_time", "GET", null)
+            rtc_time = await response.json()
+            document.getElementById("rtc_year").value = rtc_time["year"]
+            document.getElementById("rtc_month").value = rtc_time["month"]
+            document.getElementById("rtc_day").value = rtc_time["day"]
+            document.getElementById("rtc_hour").value = rtc_time["hour"]
+            document.getElementById("rtc_minute").value = rtc_time["minute"]
+            document.getElementById("rtc_second").value = rtc_time["second"]
+        }
+
+        function onLoad() {
+            getApInfo()
+            getStaInfo()
+            getRTCTime()
+        }
+    </script>
+</head>
+
+<body onload="onLoad()">
+    <div>
+        <h1>WLAN</h1>
+        <h2>AP</h2>
+        <span id="ap_info"></span>
+        <br>
+        <h2>Station</h2>
+        <span id="sta_info"></span>
+        <br>
+        <button onclick="getWLANs()">List available WLANs</button>
+        <br>
+        <br>
+        <div id="wlans"></div>
+        <br>
+        <hr />
+    </div>
+    <div>
+        <h1>LCD</h1>
+
+        <h2>Backlight</h2>
+        <button onclick="toggleBacklight()">Toggle backlight</button>
+
+        <h2>Background color</h2>
+        R <input id="bg_r" type="number" min="1" max="255">
+        G <input id="bg_g" type="number" min="1" max="255">
+        B <input id="bg_b" type="number" min="1" max="255">
+        <button onclick="setBackgroundColor()">Set</button>
+
+        <h2>Foreground color</h2>
+        R <input id="fg_r" type="number" min="1" max="255">
+        G <input id="fg_g" type="number" min="1" max="255">
+        B <input id="fg_b" type="number" min="1" max="255">
+        <button onclick="setForegroundColor()">Set</button>
+
+        <h2>Text</h2>
+        Text <input id="text" type="text">
+        <button onclick="setText()">Set</button>
+        <br><br>
+        <hr />
+    </div>
+    <div>
+        <h1>RTC</h1>
+        Year <input id="rtc_year" type="number" min="1900" max="2099">
+        Month <input id="rtc_month" type="number" min="1" max="12">
+        Day <input id="rtc_day" type="number" min="1" max="31">
+        Hour <input id="rtc_hour" type="number" min="0" max="23">
+        Minute <input id="rtc_minute" type="number" min="0" max="59">
+        Second <input id="rtc_second" type="number" min="0" max="59">
+        <button onclick="setRTCTime()">Set</button>
+    </div>
+</body>
+
+</html>
