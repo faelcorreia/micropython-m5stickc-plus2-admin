@@ -14,7 +14,7 @@ Use this as a base for your projects.
 ```bash
 pip3 -m venv .venv
 source .venv/bin/activate
-pip3 install -r requirements
+pip3 install -r requirements.txt
 ```
 
 3. Use VS Code tasks or copy the files directly:
