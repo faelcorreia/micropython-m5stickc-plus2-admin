@@ -1,4 +1,4 @@
-from machine import I2C, Pin, SPI, ADC # type: ignore
+from machine import I2C, Pin, SPI, ADC  # type: ignore
 from libs.st7789 import ST7789, ColorMode_16bit
 from libs.pcf8563 import PCF8563
 from libs.mpu6886 import MPU6886, SF_G, SF_DEG_S
@@ -47,15 +47,18 @@ class Admin:
 
     # Set up ST7789 LCD
     tft = ST7789(
-        spi,
-        135,
-        240,
+        spi=spi,
+        width=240,
+        height=135,
+        xstart=40,
+        ystart=52,
         reset=Pin(12, Pin.OUT),
         dc=Pin(14, Pin.OUT),
         cs=Pin(5, Pin.OUT),
         buf=bytearray(4096),
         color_mode=ColorMode_16bit,
     )
+    tft.change_orientation("RLANDSCAPE")
 
     # Set up MPU6886 Sensor
     sensor = MPU6886(i2c, accel_sf=SF_G, gyro_sf=SF_DEG_S)
@@ -64,24 +67,21 @@ class Admin:
         self.create_network()
         self.create_button_controllers()
 
-    def turn_off_led(self):
-        self.led.value(0)
-
-    def turn_on_led(self):
-        self.led.value(1)
-
     def create_button_controllers(self):
+        turn_on_led = lambda: self.led.value(1)
+        turn_off_led = lambda: self.led.value(0)
+
         self.button_a_controller = ButtonController(self.button_a, "Button A")
-        self.button_a_controller.register_event("on_press", self.turn_on_led)
-        self.button_a_controller.register_event("on_release", self.turn_off_led)
+        self.button_a_controller.register_event("on_press", turn_on_led)
+        self.button_a_controller.register_event("on_release", turn_off_led)
 
         self.button_b_controller = ButtonController(self.button_b, "Button B")
-        self.button_b_controller.register_event("on_press", self.turn_on_led)
-        self.button_b_controller.register_event("on_release", self.turn_off_led)
+        self.button_b_controller.register_event("on_press", turn_on_led)
+        self.button_b_controller.register_event("on_release", turn_off_led)
 
         self.button_c_controller = ButtonController(self.button_c, "Button C")
-        self.button_c_controller.register_event("on_press", self.turn_on_led)
-        self.button_c_controller.register_event("on_release", self.turn_off_led)
+        self.button_c_controller.register_event("on_press", turn_on_led)
+        self.button_c_controller.register_event("on_release", turn_off_led)
 
     def create_network(self):
         self.wlancontroller = WLANController()

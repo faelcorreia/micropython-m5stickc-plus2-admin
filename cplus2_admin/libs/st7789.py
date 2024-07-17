@@ -1,3 +1,4 @@
+# Copyright (c) 2024 Rafael Correia
 # Copyright (c) 2020 Sebastian Wicki
 # Copyright (c) 2019 Ivan Belokobylskiy
 #
@@ -19,23 +20,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-# Based on https://github.com/devbis/st7789py_mpy
+# Based on https://github.com/devbis/st7789py_mpy and https://github.com/gandro/micropython-m5stickc-plus
 #
 # Notable modifications:
-#   - Added support for text()
-#   - Pre-allocated shared buffer for text() and draw_rect()
-#   - Minor memory optimizations for bytecode builds by using shorter error
-#     messages, more aggressive inlining, and making most consts private
+#   - Created method to rotate screen
 """
 Driver for the ST7789 display controller.
 """
 
 import sys
 
-import framebuf # type: ignore
-import ustruct # type: ignore
-from micropython import const # type: ignore
-from utime import sleep_ms # type: ignore
+import framebuf  # type: ignore
+import ustruct  # type: ignore
+from micropython import const  # type: ignore
+from utime import sleep_ms  # type: ignore
 
 # commands
 _ST77XX_NOP = const(0x00)
@@ -52,13 +50,13 @@ _ST77XX_INVOFF = const(0x20)
 _ST77XX_INVON = const(0x21)
 _ST77XX_DISPOFF = const(0x28)
 _ST77XX_DISPON = const(0x29)
-_ST77XX_CASET = const(0x2a)
-_ST77XX_RASET = const(0x2b)
-_ST77XX_RAMWR = const(0x2c)
-_ST77XX_RAMRD = const(0x2e)
+_ST77XX_CASET = const(0x2A)
+_ST77XX_RASET = const(0x2B)
+_ST77XX_RAMWR = const(0x2C)
+_ST77XX_RAMRD = const(0x2E)
 
 _ST77XX_PTLAR = const(0x30)
-_ST77XX_COLMOD = const(0x3a)
+_ST77XX_COLMOD = const(0x3A)
 _ST7789_MADCTL = const(0x36)
 
 _ST7789_MADCTL_MY = const(0x80)
@@ -69,10 +67,10 @@ _ST7789_MADCTL_BGR = const(0x08)
 _ST7789_MADCTL_MH = const(0x04)
 _ST7789_MADCTL_RGB = const(0x00)
 
-_ST7789_RDID1 = const(0xda)
-_ST7789_RDID2 = const(0xdb)
-_ST7789_RDID3 = const(0xdc)
-_ST7789_RDID4 = const(0xdd)
+_ST7789_RDID1 = const(0xDA)
+_ST7789_RDID2 = const(0xDB)
+_ST7789_RDID3 = const(0xDC)
+_ST7789_RDID4 = const(0xDD)
 
 ColorMode_65K = const(0x50)
 ColorMode_262K = const(0x60)
@@ -88,11 +86,27 @@ _PIXEL_LEN = const(2)
 _FONT_HEIGHT = const(8)
 _FONT_WIDTH = const(8)
 
+_ST7789_PORTRAIT = const(0xC0)
+_ST7789_RPORTRAIT = const(0x00)
+_ST7789_LANDSCAPE = const(0xA0)
+_ST7789_RLANDSCAPE = const(0x60)
+
 
 class ST7789:
-    def __init__(self, spi, width, height, reset, dc, cs=None, buf=None,
-                 xstart=-1, ystart=-1, init=True,
-                 color_mode=ColorMode_65K | ColorMode_16bit):
+    def __init__(
+        self,
+        spi,
+        width,
+        height,
+        reset,
+        dc,
+        cs=None,
+        buf=None,
+        xstart=-1,
+        ystart=-1,
+        init=True,
+        color_mode=ColorMode_65K | ColorMode_16bit,
+    ):
         """
         display = st7789.ST7789(
             SPI(1, baudrate=40000000, phase=0, polarity=1),
@@ -113,8 +127,8 @@ class ST7789:
             buf = bytearray(_BUF_DEFAULT_LEN)
         self.buf = memoryview(buf)
 
-        if sys.byteorder == 'little':
-            self._to_be16 = lambda c: (c << 8) & 0xff00 | (c >> 8) & 0x00ff
+        if sys.byteorder == "little":
+            self._to_be16 = lambda c: (c << 8) & 0xFF00 | (c >> 8) & 0x00FF
         else:
             self._to_be16 = lambda c: c
 
@@ -145,6 +159,16 @@ class ST7789:
             self.fill(0)
             self.write(_ST77XX_DISPON)
             sleep_ms(10)
+
+    def change_orientation(self, orientation: str):
+        if orientation == "LANDSCAPE":
+            self.write(_ST7789_MADCTL, bytes([_ST7789_LANDSCAPE]))
+        elif orientation == "PORTRAIT":
+            self.write(_ST7789_MADCTL, bytes([_ST7789_PORTRAIT]))
+        elif orientation == "RLANDSCAPE":
+            self.write(_ST7789_MADCTL, bytes([_ST7789_RLANDSCAPE]))
+        elif orientation == "RPORTRAIT":
+            self.write(_ST7789_MADCTL, bytes([_ST7789_RPORTRAIT]))
 
     def cs_low(self):
         if self.cs:
@@ -267,8 +291,7 @@ class ST7789:
     def fill_rect(self, x, y, width, height, color):
         buf_len = len(self.buf)
         chunks, rest = divmod(width * height * _PIXEL_LEN, buf_len)
-        f = framebuf.FrameBuffer(
-            self.buf, buf_len // _PIXEL_LEN, 1, framebuf.RGB565)
+        f = framebuf.FrameBuffer(self.buf, buf_len // _PIXEL_LEN, 1, framebuf.RGB565)
         f.fill(self._to_be16(color))
 
         self.set_window(x, y, x + width - 1, y + height - 1)
@@ -318,8 +341,7 @@ class ST7789:
         if text_mem > len(self.buf):
             raise ValueError("buffer too small")
 
-        f = framebuf.FrameBuffer(self.buf, text_width,
-                                 _FONT_HEIGHT, framebuf.RGB565)
+        f = framebuf.FrameBuffer(self.buf, text_width, _FONT_HEIGHT, framebuf.RGB565)
         f.fill(self._to_be16(bg))
         f.text(s, 0, 0, self._to_be16(fg))
         self.blit_buffer(self.buf[:text_mem], x, y, text_width, _FONT_HEIGHT)

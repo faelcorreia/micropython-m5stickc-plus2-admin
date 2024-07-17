@@ -97,30 +97,16 @@ class WebController:
         self.backlight.on()
         self.tft.fill(self.bg_color)
         tft.text(
-            "AP SSID:",
+            f"AP SSID: {ap_info["ssid"]}",
             self.DEFAULT_TEXT_X,
             self.DEFAULT_TEXT_Y,
             self.fg_color,
             self.bg_color,
         )
         tft.text(
-            ap_info["ssid"],
+            f"AP IP: {ap_info["ip"]}",
             self.DEFAULT_TEXT_X,
-            self.DEFAULT_TEXT_Y + 20,
-            self.fg_color,
-            self.bg_color,
-        )
-        tft.text(
-            "AP IP:",
-            self.DEFAULT_TEXT_X,
-            self.DEFAULT_TEXT_Y + 50,
-            self.fg_color,
-            self.bg_color,
-        )
-        tft.text(
-            ap_info["ip"],
-            self.DEFAULT_TEXT_X,
-            self.DEFAULT_TEXT_Y + 70,
+            self.DEFAULT_TEXT_Y + 10,
             self.fg_color,
             self.bg_color,
         )
