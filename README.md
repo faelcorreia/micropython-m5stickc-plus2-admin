@@ -2,7 +2,7 @@
 
 An admin web page for M5StickC Plus2 with Micropython.
 
-Used this a base for your projects.
+Used this as a base for your projects.
 
 ## Usage
 
