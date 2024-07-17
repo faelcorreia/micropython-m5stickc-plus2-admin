@@ -4,9 +4,10 @@ from libs.pcf8563 import PCF8563
 from libs.mpu6886 import MPU6886, SF_G, SF_DEG_S
 from libs.wlancontroller import WLANController
 from libs.webcontroller import WebController
+from libs.buttoncontroller import ButtonController
 
 
-class Main:
+class Admin:
     last_button_state = 0
 
     adc = ADC(Pin(38, Pin.IN))
@@ -59,23 +60,28 @@ class Main:
     # Set up MPU6886 Sensor
     sensor = MPU6886(i2c, accel_sf=SF_G, gyro_sf=SF_DEG_S)
 
-    def on_button_press(self, button: Pin):
-        temp_state = button.value()
-        # OnRelease
-        if (self.last_button_state == 0) and (temp_state == 1):
-            self.last_button_state = temp_state
-            self.led.value(0)
-        # OnDown
-        elif (self.last_button_state == 1) and (temp_state == 1):
-            self.last_button_state = temp_state
-            self.led.value(0)
-        # OnPress
-        elif (self.last_button_state == 1) and (temp_state == 0):
-            self.last_button_state = temp_state
-            self.led.value(1)
-        # OnUp
-        else:
-            self.led.value(1)
+    def __init__(self) -> None:
+        self.create_network()
+        self.create_button_controllers()
+
+    def turn_off_led(self):
+        self.led.value(0)
+
+    def turn_on_led(self):
+        self.led.value(1)
+
+    def create_button_controllers(self):
+        self.button_a_controller = ButtonController(self.button_a, "Button A")
+        self.button_a_controller.register_event("on_press", self.turn_on_led)
+        self.button_a_controller.register_event("on_release", self.turn_off_led)
+
+        self.button_b_controller = ButtonController(self.button_b, "Button B")
+        self.button_b_controller.register_event("on_press", self.turn_on_led)
+        self.button_b_controller.register_event("on_release", self.turn_off_led)
+
+        self.button_c_controller = ButtonController(self.button_c, "Button C")
+        self.button_c_controller.register_event("on_press", self.turn_on_led)
+        self.button_c_controller.register_event("on_release", self.turn_off_led)
 
     def create_network(self):
         self.wlancontroller = WLANController()
@@ -87,15 +93,20 @@ class Main:
         self.webcontroller.start()
 
 
-print("Program started.")
-print("Initializing infinite loop...\n")
-
 if __name__ == "__main__":
-    main = Main()
-    main.create_network()
+    admin = Admin()
+    print("Program started.")
+    print("Initializing infinite loop...\n")
+    # Loop have a delay of at least 0.1 second due the web server process
     while True:
-        # Button test
-        main.on_button_press(main.button_a)
+        # Process events from Button A
+        admin.button_a_controller.process()
+
+        # Process events from Button B
+        admin.button_b_controller.process()
+
+        # Process events from Button C
+        admin.button_c_controller.process()
 
         # Process Web server requests
-        main.webcontroller.process()
+        admin.webcontroller.process()
