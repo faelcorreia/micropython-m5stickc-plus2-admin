@@ -12,28 +12,28 @@ class Main:
     adc = ADC(Pin(38, Pin.IN))
     battery_uv = adc.read_uv()
 
-    # Set up M5StackC Plus2 I2C
+    # Set up M5StickC Plus2 I2C
     i2c = I2C(0, sda=Pin(21), scl=Pin(22), freq=400000)
 
-    # Set up M5StackC Plus2 LED
+    # Set up M5StickC Plus2 LED
     led = Pin(19, Pin.OUT)
 
-    # Set up M5StackC Plus2 Button A
+    # Set up M5StickC Plus2 Button A
     button_a = Pin(37, Pin.IN)
 
-    # Set up M5StackC Plus2 Button B
+    # Set up M5StickC Plus2 Button B
     button_b = Pin(39, Pin.IN)
 
-    # Set up M5StackC Plus2 Button C
+    # Set up M5StickC Plus2 Button C
     button_c = Pin(35, Pin.IN)
 
-    # Set up M5StackC Plus2 LCD Backlight
+    # Set up M5StickC Plus2 LCD Backlight
     backlight = Pin(27, Pin.OUT)
 
     # Set up BM8563 RTC (clone of the NXP PCF8563)
     rtc = PCF8563(i2c)
 
-    # Set up M5StackC Plus2 SPI
+    # Set up M5StickC Plus2 SPI
     spi = SPI(
         1,
         baudrate=20000000,
@@ -85,6 +85,7 @@ class Main:
             self.wlancontroller, self.backlight, self.tft, self.sensor, self.rtc
         )
         self.webcontroller.start()
+
 
 print("Program started.")
 print("Initializing infinite loop...\n")

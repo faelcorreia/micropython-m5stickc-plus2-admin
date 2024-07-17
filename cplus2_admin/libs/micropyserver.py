@@ -51,7 +51,7 @@ class MicroPyServer(object):
         self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._sock.bind((self._host, self._port))
         self._sock.listen(1)
-        print("Server start")
+        print("Web server start")
         
     def process(self):
         """ Process requests """
@@ -89,7 +89,7 @@ class MicroPyServer(object):
         self._connect.close()
         self._sock.close()
         self._sock = None
-        print("Server stop")
+        print("Web server stop")
 
     def add_route(self, path, handler, method="GET"):
         """ Add new route """
