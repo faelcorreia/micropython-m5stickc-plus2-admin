@@ -49,8 +49,8 @@ Change port and baud rate if needed:
 
 The following modules are derived from third-party sources:
 
-- `colors`: https://github.com/gandro/micropython-m5stickc-plus
-- `micropyserver`: https://github.com/troublegum/micropyserver 
-- `mpu6886`: https://github.com/tuupola/micropython-mpu6886
-- `pcf8563`: https://github.com/gandro/micropython-m5stickc-plus
-- `st7789`: https://github.com/gandro/micropython-m5stickc-plus
+- `colors`: from https://github.com/gandro/micropython-m5stickc-plus
+- `micropyserver`: based on https://github.com/troublegum/micropyserver (infinite loop externalized)
+- `mpu6886`: from https://github.com/tuupola/micropython-mpu6886
+- `pcf8563`: from https://github.com/gandro/micropython-m5stickc-plus
+- `st7789`: from https://github.com/gandro/micropython-m5stickc-plus
