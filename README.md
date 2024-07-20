@@ -56,4 +56,4 @@ The following modules are derived from third-party sources:
 - `mpu6886`: from https://github.com/tuupola/micropython-mpu6886
 - `pcf8563`: from https://github.com/gandro/micropython-m5stickc-plus
 - `st7789`: from https://github.com/gandro/micropython-m5stickc-plus
-- `tinyweb`: from https://github.com/troublegum/micropyserver
+- `tinyweb`: from https://github.com/belyalov/tinyweb
