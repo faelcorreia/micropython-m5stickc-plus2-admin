@@ -52,7 +52,8 @@ Change port and baud rate if needed:
 The following modules are derived from third-party sources:
 
 - `colors`: from https://github.com/gandro/micropython-m5stickc-plus
-- `micropyserver`: based on https://github.com/troublegum/micropyserver     (infinite loop externalized)
+- `logging`: from https://github.com/micropython/micropython-lib
 - `mpu6886`: from https://github.com/tuupola/micropython-mpu6886
 - `pcf8563`: from https://github.com/gandro/micropython-m5stickc-plus
 - `st7789`: from https://github.com/gandro/micropython-m5stickc-plus
+- `tinyweb`: from https://github.com/troublegum/micropyserver

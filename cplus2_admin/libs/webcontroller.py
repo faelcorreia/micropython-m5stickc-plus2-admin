@@ -20,7 +20,6 @@
 #
 # https://github.com/faelcorreia/micropython-m5stickc-plus2-admin
 
-from libs.micropyserver import MicroPyServer
 from libs.wlancontroller import WLANController
 from libs.ledcontroller import LEDController
 import binascii
@@ -31,213 +30,253 @@ from libs.mpu6886 import MPU6886
 from libs.pcf8563 import PCF8563
 import libs.colors as colors
 import os
+import libs.tinyweb as tinyweb
+from libs.tinyweb import response, request
 
+class Config():
+    def __init__(self, config_path):
+        self.config_path = config_path
+        try:
+            with open(self.config_path, "r") as f:
+                self.config = json.load(f)
+        except:
+            self.config = {}
+    
+    def get_property(self, key):
+        return self.config.get(key)
+    
+    def set_property(self, key, value):
+        if key in self.config:
+            self.config["key"] = value
+            with open(self.config_path, "w") as f:
+                json.dump(self.config, f)
 
 class WebController:
     DEFAULT_MESSAGE = "OK"
     DEFAULT_TEXT_X = 10
     DEFAULT_TEXT_Y = 20
     DATA_FOLDER = "/data"
+    CHUNK_SIZE = 1024
 
     def __init__(
         self,
         wlancontroller: WLANController,
         ledcontroller: LEDController,
         backlight: Pin,
-        tft: ST7789,
+        display: ST7789,
         sensor: MPU6886,
         rtc: PCF8563,
     ) -> None:
-        self.micropyserver = MicroPyServer()
-
+        self.app = tinyweb.webserver()
+        
         self.wlancontroller = wlancontroller
         self.ledcontroller = ledcontroller
         self.backlight = backlight
-        self.tft = tft
+        self.display = display
         self.sensor = sensor
         self.rtc = rtc
-
-        # Define routes
-        self.micropyserver.add_route("/", self.root)
-        self.micropyserver.add_route("/wlans", self.get_wlans)
-        self.micropyserver.add_route("/wlan_connect", self.wlan_connect, method="POST")
-        self.micropyserver.add_route("/get_ap_info", self.get_ap_info)
-        self.micropyserver.add_route("/get_sta_info", self.get_sta_info)
-        self.micropyserver.add_route(
-            "/toggle_backlight", self.toggle_backlight, method="POST"
-        )
-        self.micropyserver.add_route(
-            "/set_background_color", self.set_background_color, method="POST"
-        )
-        self.micropyserver.add_route(
-            "/set_foreground_color", self.set_foreground_color, method="POST"
-        )
-        self.micropyserver.add_route("/set_text", self.set_text, method="POST")
-        self.micropyserver.add_route("/get_temperature", self.get_temperature)
-        self.micropyserver.add_route("/get_gyro", self.get_gyro)
-        self.micropyserver.add_route("/get_acceleration", self.get_acceleration)
-        self.micropyserver.add_route("/toggle_led", self.toggle_led, method="POST")
-        self.micropyserver.add_route("/set_rtc_time", self.set_rtc_time, method="POST")
-        self.micropyserver.add_route("/get_rtc_time", self.get_rtc_time)
-
+        
         # Create data folder
         try:
             os.stat(self.DATA_FOLDER)
         except:
             os.mkdir(self.DATA_FOLDER)
-
+        
+        # Config file
+        config_path = f"{self.DATA_FOLDER}/config.json"
+        self.config = Config(config_path)
+        
         # Get WLAN profile and connect
-        self.wlan_profile_path = f"{self.DATA_FOLDER}/wlan_profile.json"
-        try:
-            with open(self.wlan_profile_path, "r") as f:
-                wlan_profile = json.load(f)
-                wlancontroller.connect(wlan_profile["ssid"], wlan_profile["password"])
-        except:
+        wlan_ssid = self.config.get_property("wlan_ssid")
+        wlan_password = self.config.get_property("wlan_password")
+        if wlan_ssid != None and wlan_password != None:
+            wlancontroller.connect(wlan_ssid, wlan_password)        
+        else:
             print("Default WLAN to connect does not exists.")
-        ap_info = wlancontroller.get_ap_info()
-
+            
+        # LCD Parameters
+        self.display
+        self.display_parameters = {
+            "background" : colors.BLACK,
+            "foreground" : colors.WHITE,
+            "text_x" : self.DEFAULT_TEXT_X,
+            "text_y" : self.DEFAULT_TEXT_Y
+        }
+        
         # Start default screen
-        self.bg_color = colors.BLACK
-        self.fg_color = colors.WHITE
+        ap_info = wlancontroller.get_ap_info()
         self.backlight.on()
-        self.tft.fill(self.bg_color)
-        tft.text(
+        self.display.fill(self.display_parameters["background"])
+        display.text(
             f"AP SSID: {ap_info["ssid"]}",
             self.DEFAULT_TEXT_X,
             self.DEFAULT_TEXT_Y,
-            self.fg_color,
-            self.bg_color,
+            self.display_parameters["foreground"],
+            self.display_parameters["background"],
         )
-        tft.text(
+        display.text(
             f"AP IP: {ap_info["ip"]}",
             self.DEFAULT_TEXT_X,
             self.DEFAULT_TEXT_Y + 10,
-            self.fg_color,
-            self.bg_color,
+            self.display_parameters["foreground"],
+            self.display_parameters["background"],
         )
+
+        # Define routes
+        self.app.add_route("/", self.root)
+        self.app.add_resource(WebController.AP, "/api/ap", wlancontroller=self.wlancontroller)
+        self.app.add_resource(WebController.STA, "/api/sta", wlancontroller=self.wlancontroller)
+        self.app.add_resource(WebController.WLANList, "/api/wlan", wlancontroller=self.wlancontroller)
+        self.app.add_resource(WebController.WLANConnect, "/api/wlan/connect", wlancontroller=self.wlancontroller, config=self.config)
+        self.app.add_resource(WebController.RTC, "/api/rtc", rtc=self.rtc)
+        self.app.add_resource(WebController.DisplayBacklight, "/api/display/backlight/toggle", backlight=self.backlight)
+        self.app.add_resource(WebController.DisplayBackgroundColor, "/api/display/background/color", display=self.display, display_parameters=self.display_parameters)
+        self.app.add_resource(WebController.DisplayForegroundColor, "/api/display/foreground/color", display_parameters=self.display_parameters)
+        self.app.add_resource(WebController.DisplayText, "/api/display/text", display=self.display, display_parameters=self.display_parameters)
+        self.app.add_resource(WebController.SensorTemperature, "/api/sensor/temperature", sensor=self.sensor)
+        self.app.add_resource(WebController.SensorRotation, "/api/sensor/rotation", sensor=self.sensor)
+        self.app.add_resource(WebController.SensorAcceleration, "/api/sensor/acceleration", sensor=self.sensor)
+        self.app.add_resource(WebController.LED, "/api/led/toggle", ledcontroller=self.ledcontroller)
 
     def start(self):
-        self.micropyserver.start()
+        self.app.run(host='0.0.0.0', port=8081, loop_forever=False)
+        
+    async def stop_coro(self):
+        self.app.loop.stop()
+        
+    async def stop(self):
+        return await self.stop_coro()
 
     def process(self):
-        self.micropyserver.process()
+        self.app.loop.create_task(self.stop())
+        self.app.loop.run_forever()
 
-    def root(self, request):
-        del request
+    async def root(self, req: request, resp: response):
+        del req
+        await resp.start_html()
         with open("public/index.html") as f:
-            self.micropyserver.send(f.read())
-
-    def get_ap_info(self, request):
-        del request
-        ap_info = self.wlancontroller.get_ap_info()
-        self.micropyserver.send(json.dumps(ap_info))
-
-    def get_sta_info(self, request):
-        del request
-        sta_info = self.wlancontroller.get_sta_info()
-        self.micropyserver.send(json.dumps(sta_info))
-
-    def get_wlans(self, request):
-        del request
-        wlans = []
-        for wlan in self.wlancontroller.list_available():
-            wlans.append(
-                {
-                    "ssid": wlan[0].decode(),
-                    "bssid": binascii.hexlify(wlan[1]).decode(),
-                    "channel": wlan[2],
-                    "dbm": wlan[3],
-                    "is_open": wlan[4] == 0,
-                }
-            )
-        self.micropyserver.send(json.dumps(wlans))
-
-    def wlan_connect(self, request):
-        wlan_data = json.loads(request["body"])
-        try:
-            self.wlancontroller.disconnect()
-            self.wlancontroller.connect(wlan_data["ssid"], wlan_data["password"])
-            with open(self.wlan_profile_path, "w") as f:
-                json.dump(wlan_data, f)
-            self.micropyserver.send(self.DEFAULT_MESSAGE)
-        except Exception as e:
-            print(e)
-            self.micropyserver.send(str(e))
-
-    def toggle_backlight(self, request):
-        del request
-        if self.backlight.value() == 1:
-            self.backlight.off()
-        else:
-            self.backlight.on()
-        self.micropyserver.send(self.DEFAULT_MESSAGE)
-
-    def set_background_color(self, request):
-        rgb = json.loads(request["body"])
-        self.bg_color = colors.rgb565(rgb["r"], rgb["g"], rgb["b"])
-        self.tft.fill(self.bg_color)
-        self.micropyserver.send(self.DEFAULT_MESSAGE)
-
-    def set_foreground_color(self, request):
-        rgb = json.loads(request["body"])
-        self.fg_color = colors.rgb565(rgb["r"], rgb["g"], rgb["b"])
-        self.micropyserver.send(self.DEFAULT_MESSAGE)
-
-    def set_text(self, request):
-        text = json.loads(request["body"])["text"]
-        self.tft.fill(self.bg_color)
-        self.tft.text(
-            text, self.DEFAULT_TEXT_X, self.DEFAULT_TEXT_Y, self.fg_color, self.bg_color
-        )
-        self.micropyserver.send(self.DEFAULT_MESSAGE)
-
-    def get_temperature(self, request):
-        del request
-        self.micropyserver.send(json.dumps({"temperature": self.sensor.temperature()}))
-
-    def get_gyro(self, request):
-        del request
-        gyro = self.sensor.gyro
-        self.micropyserver.send(
-            json.dumps({"gyro_x": gyro[0], "gyro_y": gyro[1], "gyro_z": gyro[2]})
-        )
-
-    def get_acceleration(self, request):
-        del request
-        acceleration = self.sensor.acceleration
-        self.micropyserver.send(
-            json.dumps(
-                {
-                    "acceleration_x": acceleration[0],
-                    "acceleration_y": acceleration[1],
-                    "acceleration_z": acceleration[2],
-                }
-            )
-        )
-    
-    def toggle_led(self, request):
-        del request
-        self.ledcontroller.toggle()
-        self.micropyserver.send(self.DEFAULT_MESSAGE)
+            while True:
+                data = f.read(1024)
+                if not data:
+                    break
+                await resp.send(data)
+                
+    class AP:
+        def get(self, data, wlancontroller: WLANController):
+            del data
+            ap = wlancontroller.get_ap_info()
+            return {"message": "AP info returned.", "result": ap}
         
-    def set_rtc_time(self, request):
-        rtc_time = json.loads(request["body"])
-        self.rtc.datetime((rtc_time["year"], rtc_time["month"], rtc_time["day"], rtc_time["hour"], rtc_time["minute"], rtc_time["second"], rtc_time["weekday"]))
-        self.micropyserver.send(self.DEFAULT_MESSAGE)
+    class STA:
+        def get(self, data, wlancontroller: WLANController):
+            del data
+            sta = wlancontroller.get_sta_info()
+            return {"message": "STA info returned.", "result": sta}
 
-    def get_rtc_time(self, request):
-        del request
-        datetime = self.rtc.datetime()
-        self.micropyserver.send(
-            json.dumps(
-                {
-                    "year": datetime[0],
-                    "month": datetime[1],
-                    "day": datetime[2],
-                    "hour": datetime[3],
-                    "minute": datetime[4],
-                    "second": datetime[5],
-                    "weekday": datetime[6],
-                }
+    class WLANList:
+        def get(self, data, wlancontroller: WLANController):
+            del data
+            wlans = []
+            for wlan in wlancontroller.list_available():
+                wlans.append(
+                    {
+                        "ssid": wlan[0].decode(),
+                        "bssid": binascii.hexlify(wlan[1]).decode(),
+                        "channel": wlan[2],
+                        "dbm": wlan[3],
+                        "is_open": wlan[4] == 0,
+                    }
+                )
+            return {"message": "WLAN list returned.", "result": wlans}
+        
+    class WLANConnect:
+        def post(self, data:dict, wlancontroller: WLANController, config: Config):  
+            ssid = data.get("ssid")
+            password = data.get("password")
+            if ssid != None and password != None:
+                wlancontroller.disconnect()            
+                connected = wlancontroller.connect(data["ssid"], data["password"])
+                if connected:
+                    config.set_property("wlan_ssid", data["ssid"])
+                    config.set_property("wlan_password", data["password"])
+                    return {'message': 'connected', 'result': None}, 200
+                else:
+                    wlancontroller.connect(config.get_property("wlan_ssid"), config.get_property("wlan_password"))
+            return {'message': 'Wrong ssid or password.', 'result' : None}, 400
+    
+    class RTC:
+        def get(self, data, rtc: PCF8563):
+            del data
+            datetime = rtc.datetime()
+            result = {
+                "year": datetime[0],
+                "month": datetime[1],
+                "day": datetime[2],
+                "hour": datetime[3],
+                "minute": datetime[4],
+                "second": datetime[5],
+                "weekday": datetime[6],
+            }
+            return {"message" : "RTC datetime returned.", "result" : result}
+                
+        def post(self, data, rtc: PCF8563):
+            rtc.datetime((data["year"], data["month"], data["day"], data["hour"], data["minute"], data["second"], data["weekday"]))
+            return {"message": "RTC datetime altered.", "result": None}   
+
+    class DisplayBacklight:
+        def get(self, data, backlight: Pin):
+            del data
+            if backlight.value() == 1:
+                backlight.off()
+            else:
+                backlight.on()
+            return {"message": "Backlight toggled.", "result" : None}
+        
+    class DisplayBackgroundColor:
+        def post(self, data, display: ST7789, display_parameters: dict):
+            display_parameters["background"] = colors.rgb565(data["r"], data["g"], data["b"])
+            display.fill(display_parameters["background"])
+            return {"message" : "Background color changed.", "result": None}
+        
+    class DisplayForegroundColor:
+        def post(self, data, display_parameters: dict):
+            display_parameters["foreground"] = colors.rgb565(data["r"], data["g"], data["b"])
+            return {"message": "Foreground color changed.", "result": None}
+        
+    class DisplayText:
+        def post(self, data, display: ST7789, display_parameters: dict):
+            display.fill(display_parameters["background"])
+            display.text(
+                data["text"], display_parameters["text_x"], display_parameters["text_y"], display_parameters["foreground"], display_parameters["background"]
             )
-        )
+            return {"message" : "Text written.", "result": None}
+    
+    class SensorTemperature:
+        def get(self, data, sensor: MPU6886):
+            del data
+            temperature = {"temperature":sensor.temperature}
+            return {"message": "Sensor temperature returned.", "result" : temperature}
+
+    class SensorRotation:
+        def get(self, data, sensor: MPU6886):
+            del data
+            gyro = sensor.gyro
+            rotation = {"x": gyro[0], "y": gyro[1], "z": gyro[2]}
+            return {"message" : "Sensor rotation data returned.", "result" : rotation}
+        
+    class SensorAcceleration:
+        def get(self, data, sensor: MPU6886):
+            del data
+            acceleration = sensor.acceleration
+            acceleration_data = {
+                "x": acceleration[0],
+                "y": acceleration[1],
+                "z": acceleration[2]
+            }
+            return {"message" : "Sensor acceleration data returned.", "result": acceleration_data}
+
+    class LED:
+        def get(self, data, ledcontroller: LEDController):
+            del data
+            ledcontroller.toggle()
+            return {"message": "LED toggled.", "result": None}

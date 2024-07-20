@@ -20,7 +20,7 @@
 #
 # https://github.com/faelcorreia/micropython-m5stickc-plus2-admin
 
-import network # type: ignore
+import network  # type: ignore
 import time
 
 
@@ -42,7 +42,7 @@ class WLANController:
     def configure_ap(self):
         self.ap_if.config(essid=self.AP_SSID)
 
-    def get_ap_info(self):
+    def get_ap_info(self) -> dict[str, str]:
         ap_info = self.ap_if.ifconfig()
         return {
             "ssid": self.AP_SSID,
@@ -77,6 +77,8 @@ class WLANController:
                 time.sleep(self.CONNECT_DELAY)
             if connected:
                 print("Connected. Network config: ", self.sta_if.ifconfig())
+                return True
+        return False
 
     def disconnect(self):
         if self.sta_if.isconnected():

@@ -20,7 +20,7 @@
 #
 # https://github.com/faelcorreia/micropython-m5stickc-plus2-admin
 
-from machine import Pin
+from machine import Pin  # type: ignore
 
 
 class LEDController:

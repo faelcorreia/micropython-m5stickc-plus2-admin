@@ -20,34 +20,33 @@
 #
 # https://github.com/faelcorreia/micropython-m5stickc-plus2-admin
 
-from machine import Pin # type: ignore
+from machine import Pin  # type: ignore
 
 
 class ButtonController:
-    last_state = 0
-
     def __init__(self, button: Pin, name) -> None:
         self.button = button
         self.name = name
         self.events = {"on_release": [], "on_down": [], "on_press": [], "on_up": []}
+        self.last_state = 1
 
     def process(self):
         temp_state = self.button.value()
         # On release
         if (self.last_state == 0) and (temp_state == 1):
-            self.trigger_event("on_release")
+            self._trigger_event("on_release")
         # On up
         elif (self.last_state == 1) and (temp_state == 1):
-            self.trigger_event("on_up")
+            self._trigger_event("on_up")
         # On press
         elif (self.last_state == 1) and (temp_state == 0):
-            self.trigger_event("on_press")
+            self._trigger_event("on_press")
         # On down
         else:
-            self.trigger_event("on_down")
+            self._trigger_event("on_down")
         self.last_state = temp_state
 
-    def trigger_event(self, event_type):
+    def _trigger_event(self, event_type):
         if event_type in ["on_release", "on_press", "on_down"]:
             print(f"{self.name} {event_type}")
         for callback in self.events[event_type]:

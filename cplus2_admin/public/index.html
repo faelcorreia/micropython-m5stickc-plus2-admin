@@ -1,7 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>M5StickC Plus2 Manager</title>
     <style>
         body {
@@ -30,13 +32,20 @@
             font-size: 2.125rem;
             font-weight: bold;
         }
+
+        canvas {
+            display: block;
+            border: 2px white solid;
+        }
     </style>
     <script>
-        const headers = new Headers();
-        headers.append("Content-Type", "application/json");
-        wlans = null
+        const headers = {
+            "Content-Type": "application/json"
+        }
+        wlans = null;
 
         async function doFetch(url, method, body) {
+            //url = "http://192.168.100.38:8081" + url;
             response = await fetch(url, {
                 method: method,
                 body: body,
@@ -48,91 +57,113 @@
             return response
         }
 
+        async function get(url) {
+            response = await doFetch(url, "GET", null);
+            data = await response.json();
+            return data["result"];
+        }
+
+        async function post(url, json) {
+            response = await doFetch(url, "POST", JSON.stringify(json));
+        }
+
         async function getWLANs() {
-            response = await doFetch("/wlans", "GET", null)
-            wlans = await response.json();
+            wlans = await get("/api/wlan")
             document.getElementById("wlans").innerText = ""
-            wlans.forEach(wlan => {
+            for (let wlan of wlans) {
                 document.getElementById("wlans").innerHTML += `${wlan["ssid"]} (${wlan["bssid"]}) <button onclick='wlanConnect(\"${wlan["ssid"]}\")'>Connect</button><br>`
-            });
+            }
         }
 
         async function getApInfo() {
-            response = await doFetch("/get_ap_info", "GET", null)
-            ap_info = await response.json()
-            document.getElementById("ap_info").innerHTML = `SSID: ${ap_info["ssid"]}<br>IP: ${ap_info["ip"]}<br>Netmask: ${ap_info["netmask"]}<br>`
+            apInfo = await get("/api/ap")
+            document.getElementById("apInfo").innerHTML = `SSID: ${apInfo["ssid"]}<br>IP: ${apInfo["ip"]}<br>Netmask: ${apInfo["netmask"]}<br>`
         }
 
         async function getStaInfo() {
-            response = await doFetch("/get_sta_info", "GET", null)
-            ap_info = await response.json()
-            document.getElementById("sta_info").innerHTML = `SSID: ${ap_info["ssid"]}<br>IP: ${ap_info["ip"]}<br>Netmask: ${ap_info["netmask"]}<br>`
+            staInfo = await get("/api/sta")
+            document.getElementById("staInfo").innerHTML = `SSID: ${staInfo["ssid"]}<br>IP: ${staInfo["ip"]}<br>Netmask: ${staInfo["netmask"]}<br>`
         }
 
         async function wlanConnect(ssid) {
             password = null
-            wlans.forEach(wlan => {
+            for (let wlan of wlans) {
                 if (wlan["ssid"] == ssid) {
                     if (wlan["is_open"] != true) {
                         password = prompt("WLAN password:")
+                        break
                     }
                 }
-            })
-            response = await doFetch("/wlan_connect", "POST", JSON.stringify({ ssid: ssid, password: password }))
+            }
+            response = await post("/api/wlan/connect", { ssid: ssid, password: password })
             getStaInfo()
             alert("Connected!")
         }
 
-        async function toggleBacklight() {
-            await doFetch("/toggle_backlight", "POST", null)
-        }
-
-        async function setBackgroundColor() {
-            r = parseInt(document.getElementById("bg_r").value)
-            g = parseInt(document.getElementById("bg_g").value)
-            b = parseInt(document.getElementById("bg_b").value)
-            await doFetch("/set_background_color", "POST", JSON.stringify({ r: r, g: g, b: b }))
-        }
-
-        async function setForegroundColor() {
-            r = parseInt(document.getElementById("fg_r").value)
-            g = parseInt(document.getElementById("fg_g").value)
-            b = parseInt(document.getElementById("fg_b").value)
-            await doFetch("/set_foreground_color", "POST", JSON.stringify({ r: r, g: g, b: b }))
-        }
-
-        async function setText() {
-            text = document.getElementById("text").value
-            await doFetch("/set_text", "POST", JSON.stringify({ text: text }))
-        }
-
-        async function toggleLed() {
-            await doFetch("/toggle_led", "POST", null)
-        }
-
         async function getRTCTime() {
-            response = await doFetch("/get_rtc_time", "GET", null)
-            rtc_time = await response.json()
-            document.getElementById("rtc_year").value = rtc_time["year"]
-            document.getElementById("rtc_month").value = rtc_time["month"]
-            document.getElementById("rtc_day").value = rtc_time["day"]
-            document.getElementById("rtc_hour").value = rtc_time["hour"]
-            document.getElementById("rtc_minute").value = rtc_time["minute"]
-            document.getElementById("rtc_second").value = rtc_time["second"]
-            document.getElementById("rtc_weekday").value = rtc_time["weekday"]
+            rtcTime = await get("/api/rtc");
+            document.getElementById("rtcYear").value = rtcTime["year"];
+            document.getElementById("rtcMonth").value = rtcTime["month"];
+            document.getElementById("rtcDay").value = rtcTime["day"];
+            document.getElementById("rtcHour").value = rtcTime["hour"];
+            document.getElementById("rtcMinute").value = rtcTime["minute"];
+            document.getElementById("rtcSecond").value = rtcTime["second"];
+            document.getElementById("rtcWeekday").value = rtcTime["weekday"];
         }
 
         async function setRTCTime() {
-            rtc_time = {
-                "year": parseInt(document.getElementById("rtc_year").value),
-                "month": parseInt(document.getElementById("rtc_month").value),
-                "day": parseInt(document.getElementById("rtc_day").value),
-                "hour": parseInt(document.getElementById("rtc_hour").value),
-                "minute": parseInt(document.getElementById("rtc_minute").value),
-                "second": parseInt(document.getElementById("rtc_second").value),
-                "weekday": parseInt(document.getElementById("rtc_weekday").value)
-            }
-            await doFetch("/set_rtc_time", "POST", JSON.stringify(rtc_time))
+            rtcTime = {
+                "year": parseInt(document.getElementById("rtcYear").value),
+                "month": parseInt(document.getElementById("rtcMonth").value),
+                "day": parseInt(document.getElementById("rtcDay").value),
+                "hour": parseInt(document.getElementById("rtcHour").value),
+                "minute": parseInt(document.getElementById("rtcMinute").value),
+                "second": parseInt(document.getElementById("rtcSecond").value),
+                "weekday": parseInt(document.getElementById("rtcWeekday").value)
+            };
+            await post("/api/rtc", rtcTime);
+        }
+
+        async function toggleBacklight() {
+            await get("/api/display/backlight/toggle")
+        }
+
+        async function setDisplayBackgroundColor() {
+            r = parseInt(document.getElementById("bgR").value);
+            g = parseInt(document.getElementById("bgG").value);
+            b = parseInt(document.getElementById("bgB").value);
+            await post("/api/display/background/color", { r: r, g: g, b: b });
+        }
+
+        async function setDisplayForegroundColor() {
+            r = parseInt(document.getElementById("fgR").value);
+            g = parseInt(document.getElementById("fgG").value);
+            b = parseInt(document.getElementById("fgB").value);
+            await post("/api/display/foreground/color", { r: r, g: g, b: b });
+        }
+
+        async function setDisplayText() {
+            text = document.getElementById("text").value;
+            await post("/api/display/text", { text: text })
+        }
+
+        async function getRotation() {
+            rotation = await get("/api/sensor/rotation")
+            return rotation
+        }
+
+        async function getAcceleration() {
+            acceleration = await get("/api/sensor/acceleration")
+            return acceleration
+        }
+
+        async function getTemperature() {
+            data = await get("/api/sensor/temperature")
+            return data["temperature"]
+        }
+
+        async function toggleLed() {
+            await get("/api/led/toggle")
         }
 
         function onLoad() {
@@ -148,10 +179,10 @@
         <details>
             <summary>WLAN</summary>
             <h2># AP</h2>
-            <span id="ap_info"></span>
+            <span id="apInfo"></span>
             <br>
             <h2># Station</h2>
-            <span id="sta_info"></span>
+            <span id="staInfo"></span>
             <br>
             <button onclick="getWLANs()">List available WLANs</button>
             <br>
@@ -163,26 +194,26 @@
     <hr />
     <div>
         <details>
-            <summary>LCD</summary>
+            <summary>Display</summary>
 
             <h2># Backlight</h2>
             <button onclick="toggleBacklight()">Toggle backlight</button>
 
             <h2># Background color</h2>
-            R <input id="bg_r" type="number" min="1" max="255" value="0">
-            G <input id="bg_g" type="number" min="1" max="255" value="0">
-            B <input id="bg_b" type="number" min="1" max="255" value="0">
-            <button onclick="setBackgroundColor()">Set</button>
+            R <input id="bgR" type="number" min="1" max="255" value="0">
+            G <input id="bgG" type="number" min="1" max="255" value="0">
+            B <input id="bgB" type="number" min="1" max="255" value="0">
+            <button onclick="setDisplayBackgroundColor()">Set</button>
 
             <h2># Foreground color</h2>
-            R <input id="fg_r" type="number" min="1" max="255" value="0">
-            G <input id="fg_g" type="number" min="1" max="255" value="0">
-            B <input id="fg_b" type="number" min="1" max="255" value="0">
-            <button onclick="setForegroundColor()">Set</button>
+            R <input id="fgR" type="number" min="1" max="255" value="0">
+            G <input id="fgG" type="number" min="1" max="255" value="0">
+            B <input id="fgB" type="number" min="1" max="255" value="0">
+            <button onclick="setDisplayForegroundColor()">Set</button>
 
             <h2># Text</h2>
             Text <input id="text" type="text">
-            <button onclick="setText()">Set</button>
+            <button onclick="setDisplayText()">Set</button>
             <br><br>
         </details>
     </div>
@@ -200,15 +231,310 @@
         <details>
             <summary>RTC</summary>
             <br>
-            Year <input id="rtc_year" type="number" min="1900" max="2099">
-            Month <input id="rtc_month" type="number" min="1" max="12">
-            Day <input id="rtc_day" type="number" min="1" max="31">
-            Hour <input id="rtc_hour" type="number" min="0" max="23">
-            Minute <input id="rtc_minute" type="number" min="0" max="59">
-            Second <input id="rtc_second" type="number" min="0" max="59">
-            Weekday <input id="rtc_weekday" type="number" min="0" max="6">
+            Year <input id="rtcYear" type="number" min="1900" max="2099">
+            Month <input id="rtcMonth" type="number" min="1" max="12">
+            Day <input id="rtcDay" type="number" min="1" max="31">
+            Hour <input id="rtcHour" type="number" min="0" max="23">
+            Minute <input id="rtcMinute" type="number" min="0" max="59">
+            Second <input id="rtcSecond" type="number" min="0" max="59">
+            Weekday <input id="rtcWeekday" type="number" min="0" max="6">
             <button onclick="setRTCTime()">Set</button>
         </details>
+    </div>
+    <hr>
+    <div>
+        <details>
+            <summary>Sensor</summary>
+            <br>
+            <button onclick="toggleSensorDataView()">Toggle Sensor data visualization</button>
+            <br><br>
+            <div id="m5_3d"></div>
+            <br>
+        </details>
+        <script>
+            useSensorData = false
+            rotation = {
+                "x": 0,
+                "y": 0,
+                "z": 0
+            };
+            acceleration = {
+                "x": 0,
+                "y": 0,
+                "z": 0
+            };
+            temperature = 0
+
+            function toggleSensorDataView() {
+                useSensorData = !useSensorData;
+                if (useSensorData) {
+                    updateRotationData();
+                    updateAccelerationData();
+                    updateTemperatureData();
+                    resetM5Vertices();
+                    resetButtonVertices();
+                }
+            }
+
+            async function updateRotationData() {
+                if (!useSensorData) {
+                    return;
+                }
+                try {
+                    rotation = await getRotation();
+                    console.log('Rotation data updated:', rotation);
+                }
+                catch (e) {
+                    console.log('Rotation not updated:', e);
+                }
+                setTimeout(updateRotationData, sensorDataUpdateInterval);
+            }
+            updateRotationData();
+
+            async function updateAccelerationData() {
+                if (!useSensorData) {
+                    return;
+                }
+                try {
+                    acceleration = await getAcceleration();
+                    console.log('Acceleration data updated:', acceleration);
+                }
+                catch (e) {
+                    console.log('Acceleration not updated:', e);
+                }
+                setTimeout(updateAccelerationData, sensorDataUpdateInterval);
+            }
+            updateAccelerationData();
+
+            async function updateTemperatureData() {
+                if (!useSensorData) {
+                    return;
+                }
+                try {
+                    temperature = await getTemperature();
+                    console.log('Temperature data updated:', temperature);
+                }
+                catch (e) {
+                    console.log('Temperature not updated:', e);
+                }
+                setTimeout(updateTemperatureData, sensorDataUpdateInterval);
+            }
+            updateTemperatureData();
+
+            // Code for Sensor data visualization
+            // Based on this video from Mt. Ford Studios https://www.youtube.com/watch?v=gx_Sx5FeTAk
+            const COLOR_BG = "black";
+            const COLOR_CUBE = "yellow";
+            const SPEED_X = 0.05; // rps
+            const SPEED_Y = 0.15; // rps
+            const SPEED_Z = 0.10; // rps
+            const POINT3D = function (x, y, z) {
+                this.x = x;
+                this.y = y;
+                this.z = z;
+            }
+
+            var div = document.getElementById("m5_3d");
+            var canvas = document.createElement("canvas")
+            div.append(canvas)
+            var ctx = canvas.getContext("2d");
+
+            var h = 500;
+            var w = 500;
+
+            canvas.height = h;
+            canvas.width = w;
+
+            ctx.strokeStyle = COLOR_CUBE;
+            ctx.lineWidth = w / 100;
+            ctx.lineCap = "round";
+
+            var m5Center;
+            var m5FrontWidth;
+            var m5Height;
+            var m5SideWidth;
+            var m5Vertices;
+            var m5Edges;
+
+            function resetM5Vertices() {
+                m5Center = new POINT3D(w / 2, h / 2, 0)
+                m5FrontWidth = h / 4;
+                m5Height = h / 2;
+                m5SideWidth = m5FrontWidth / 2
+                m5Vertices = [
+                    new POINT3D(m5Center.x - m5FrontWidth / 2, m5Center.y - m5Height / 2, m5Center.z + m5SideWidth / 2),
+                    new POINT3D(m5Center.x + m5FrontWidth / 2, m5Center.y - m5Height / 2, m5Center.z + m5SideWidth / 2),
+                    new POINT3D(m5Center.x + m5FrontWidth / 2, m5Center.y + m5Height / 2, m5Center.z + m5SideWidth / 2),
+                    new POINT3D(m5Center.x - m5FrontWidth / 2, m5Center.y + m5Height / 2, m5Center.z + m5SideWidth / 2),
+                    new POINT3D(m5Center.x - m5FrontWidth / 2, m5Center.y - m5Height / 2, m5Center.z - m5SideWidth / 2),
+                    new POINT3D(m5Center.x + m5FrontWidth / 2, m5Center.y - m5Height / 2, m5Center.z - m5SideWidth / 2),
+                    new POINT3D(m5Center.x + m5FrontWidth / 2, m5Center.y + m5Height / 2, m5Center.z - m5SideWidth / 2),
+                    new POINT3D(m5Center.x - m5FrontWidth / 2, m5Center.y + m5Height / 2, m5Center.z - m5SideWidth / 2),
+                ];
+                m5Edges = [
+                    [0, 1], [1, 2], [2, 3], [3, 0], // back face
+                    [4, 5], [5, 6], [6, 7], [7, 4], // front face
+                    [0, 4], [1, 5], [2, 6], [3, 7] // connecting sides
+                ]
+            }
+            resetM5Vertices();
+
+            function createButtonVertices(vertex_0, vertex_1, vertex_2, vertex_3, position) {
+                face_center = new POINT3D((vertex_0.x + vertex_1.x) / 2, (vertex_1.y + vertex_2.y) / 2, (vertex_2.z + vertex_3.z) / 2)
+                face_x_width = vertex_1.x - vertex_0.x
+                face_y_width = vertex_2.y - vertex_1.y
+                face_z_width = vertex_3.z - vertex_2.z
+                if (position == "top") {
+                    sign = -1
+                } else {
+                    sign = 1
+                }
+                if (face_x_width == 0) {
+                    button_width = face_z_width / 2
+                    button_vertices = [
+                        new POINT3D(face_center.x, face_center.y - (button_width / 2) + sign * m5Height / 4, face_center.z - button_width / 2),
+                        new POINT3D(face_center.x, face_center.y - (button_width / 2) + sign * m5Height / 4, face_center.z + button_width / 2),
+                        new POINT3D(face_center.x, face_center.y + (button_width / 2) + sign * m5Height / 4, face_center.z + button_width / 2),
+                        new POINT3D(face_center.x, face_center.y + (button_width / 2) + sign * m5Height / 4, face_center.z - button_width / 2)
+                    ]
+                } else {
+                    button_width = face_x_width / 2
+                    button_vertices = [
+                        new POINT3D(face_center.x - button_width / 2, face_center.y - (button_width / 2) + m5Height / 4, face_center.z),
+                        new POINT3D(face_center.x + button_width / 2, face_center.y - (button_width / 2) + m5Height / 4, face_center.z),
+                        new POINT3D(face_center.x + button_width / 2, face_center.y + (button_width / 2) + m5Height / 4, face_center.z),
+                        new POINT3D(face_center.x - button_width / 2, face_center.y + (button_width / 2) + m5Height / 4, face_center.z)
+                    ]
+                }
+
+                return button_vertices;
+            }
+
+            button_edges = [
+                [0, 1], [1, 2], [2, 3], [3, 0]
+            ]
+
+            function resetButtonVertices() {
+                button_a_vertices = createButtonVertices(m5Vertices[4], m5Vertices[5], m5Vertices[6], m5Vertices[7], "bottom");
+
+                button_b_vertices = createButtonVertices(m5Vertices[5], m5Vertices[1], m5Vertices[3], m5Vertices[7], "top");
+
+                button_c_vertices = createButtonVertices(m5Vertices[0], m5Vertices[4], m5Vertices[6], m5Vertices[2], "bottom");
+            }
+            resetButtonVertices();
+
+            var timeDelta, timeLast = 0;
+            requestAnimationFrame(loop);
+
+            angleX = 0;
+            angleY = 0;
+            angleZ = 0;
+            gyroscopeSensitivity = 131;
+            sensorDataUpdateInterval = 100;
+
+            function rotateVertex(vertex, axis, angle, center) {
+                let a_axis = ""
+                let b_axis = ""
+                switch (axis) {
+                    case "x":
+                        a_axis = "y";
+                        b_axis = "z";
+                        break;
+                    case "y":
+                        a_axis = "z";
+                        b_axis = "x";
+                        break;
+                    case "z":
+                        a_axis = "x";
+                        b_axis = "y";
+                        break;
+                    default:
+                        return;
+                }
+                let delta_a = vertex[a_axis] - center[a_axis];
+                let delta_b = vertex[b_axis] - center[b_axis];
+                let a = delta_a * Math.cos(angle) - delta_b * Math.sin(angle);
+                let b = delta_a * Math.sin(angle) + delta_b * Math.cos(angle);
+                vertex[a_axis] = a + center[a_axis];
+                vertex[b_axis] = b + center[b_axis];
+            }
+
+            function rotateVertices(vertices, angleX, angleY, angleZ, center) {
+                for (let vertex of vertices) {
+                    rotateVertex(vertex, "x", angleX, center)
+                    rotateVertex(vertex, "y", angleY, center)
+                    rotateVertex(vertex, "z", angleZ, center)
+                }
+            }
+            FPS = 24
+            frameCount = 0
+            async function loop(timeNow) {
+                frameCount += 1;
+                if (frameCount > FPS) {
+                    frameCount = 1;
+                }
+                timeDelta = timeNow - timeLast;
+                timeLast = timeNow;
+
+                ctx.fillStyle = COLOR_BG;
+                ctx.fillRect(0, 0, w, h);
+
+                ctx.font = "14px monospace";
+                ctx.fillStyle = "white";
+                ctx.fillText(`ROTATION | X: ${rotation["x"]}, Y: ${rotation["y"]}, Z: ${rotation["z"]}`, 10, 20);
+                ctx.fillText(`ACCELERATION | X: ${acceleration["x"]}, Y: ${acceleration["y"]}, Z: ${acceleration["z"]}`, 10, 50);
+                ctx.fillText(`TEMPERATURE | ${temperature} Celsius`, 10, 80);
+
+                if (useSensorData) {
+                    angleX = (rotation["x"] / gyroscopeSensitivity) / (FPS);
+                    angleY = (rotation["y"] / gyroscopeSensitivity) / (FPS);
+                    angleZ = (rotation["z"] / gyroscopeSensitivity) / (FPS);
+                } else {
+                    angleX = timeDelta * 0.001 * SPEED_X * Math.PI * 2;
+                    angleY = timeDelta * 0.001 * SPEED_Y * Math.PI * 2;
+                    angleZ = timeDelta * 0.001 * SPEED_Z * Math.PI * 2;
+                }
+
+                rotateVertices(m5Vertices, angleX, angleY, angleZ, m5Center);
+                rotateVertices(button_a_vertices, angleX, angleY, angleZ, m5Center);
+                rotateVertices(button_b_vertices, angleX, angleY, angleZ, m5Center);
+                rotateVertices(button_c_vertices, angleX, angleY, angleZ, m5Center);
+
+                // Draw M5
+                for (let edge of m5Edges) {
+                    ctx.beginPath();
+                    ctx.moveTo(m5Vertices[edge[0]].x, m5Vertices[edge[0]].y);
+                    ctx.lineTo(m5Vertices[edge[1]].x, m5Vertices[edge[1]].y);
+                    ctx.stroke();
+                }
+
+                // Draw Button A
+                for (let edge of button_edges) {
+                    ctx.beginPath();
+                    ctx.moveTo(button_a_vertices[edge[0]].x, button_a_vertices[edge[0]].y);
+                    ctx.lineTo(button_a_vertices[edge[1]].x, button_a_vertices[edge[1]].y);
+                    ctx.stroke();
+                }
+
+                // Draw Button B
+                for (let edge of button_edges) {
+                    ctx.beginPath();
+                    ctx.moveTo(button_b_vertices[edge[0]].x, button_b_vertices[edge[0]].y);
+                    ctx.lineTo(button_b_vertices[edge[1]].x, button_b_vertices[edge[1]].y);
+                    ctx.stroke();
+                }
+
+                // Draw Button C
+                for (let edge of button_edges) {
+                    ctx.beginPath();
+                    ctx.moveTo(button_c_vertices[edge[0]].x, button_c_vertices[edge[0]].y);
+                    ctx.lineTo(button_c_vertices[edge[1]].x, button_c_vertices[edge[1]].y);
+                    ctx.stroke();
+                }
+
+                setTimeout(requestAnimationFrame, 1000 / FPS, loop);
+            }
+        </script>
     </div>
 </body>
 

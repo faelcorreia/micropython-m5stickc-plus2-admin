@@ -47,7 +47,7 @@ class Admin:
     )
 
     # Set up ST7789 LCD
-    tft = ST7789(
+    display = ST7789(
         spi=spi,
         width=240,
         height=135,
@@ -59,7 +59,7 @@ class Admin:
         buf=bytearray(4096),
         color_mode=ColorMode_16bit,
     )
-    tft.change_orientation("RLANDSCAPE")
+    display.change_orientation("RLANDSCAPE")
 
     # Set up MPU6886 Sensor
     sensor = MPU6886(i2c, accel_sf=SF_G, gyro_sf=SF_DEG_S)
@@ -93,7 +93,7 @@ class Admin:
             self.wlancontroller,
             self.ledcontroller,
             self.backlight,
-            self.tft,
+            self.display,
             self.sensor,
             self.rtc,
         )
@@ -104,7 +104,6 @@ if __name__ == "__main__":
     admin = Admin()
     print("Program started.")
     print("Initializing infinite loop...\n")
-    # Loop have a delay of at least 0.1 second due the web server process
     while True:
         # Process events from Button A
         admin.button_a_controller.process()
