@@ -21,10 +21,12 @@
 # https://github.com/faelcorreia/micropython-m5stickc-plus2-admin
 
 from machine import Pin  # type: ignore
+import libs.logging as logging
 
 
 class ButtonController:
     def __init__(self, button: Pin, name) -> None:
+        self.logger: logging.Logger = logging.getLogger("buttoncontroller")
         self.button = button
         self.name = name
         self.events = {"on_release": [], "on_down": [], "on_press": [], "on_up": []}
@@ -48,7 +50,7 @@ class ButtonController:
 
     def _trigger_event(self, event_type):
         if event_type in ["on_release", "on_press", "on_down"]:
-            print(f"{self.name} {event_type}")
+            self.logger.info(f"{self.name} {event_type}")
         for callback in self.events[event_type]:
             callback()
 

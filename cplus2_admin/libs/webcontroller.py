@@ -32,6 +32,7 @@ import libs.colors as colors
 import os
 import libs.tinyweb as tinyweb
 from libs.tinyweb import response, request
+import libs.logging as logging
 
 class Config():
     def __init__(self, config_path):
@@ -67,6 +68,7 @@ class WebController:
         sensor: MPU6886,
         rtc: PCF8563,
     ) -> None:
+        self.logger: logging.Logger = logging.getLogger("webcontroller")
         self.app = tinyweb.webserver()
         
         self.wlancontroller = wlancontroller
@@ -92,7 +94,7 @@ class WebController:
         if wlan_ssid != None and wlan_password != None:
             wlancontroller.connect(wlan_ssid, wlan_password)        
         else:
-            print("Default WLAN to connect does not exists.")
+            self.logger.warning("Default WLAN to connect does not exists.")
             
         # LCD Parameters
         self.display

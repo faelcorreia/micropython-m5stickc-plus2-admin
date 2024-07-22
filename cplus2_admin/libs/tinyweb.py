@@ -18,7 +18,7 @@ log = logging.getLogger("WEB")
 
 type_gen = type((lambda: (yield))())
 
-# with v1.21.0 release all u-modules where renamend without the u prefix
+# with v1.21.0 release all u-modules where renamed without the u prefix
 # -> uasyncio no named asyncio
 # asyncio v3 is shipped with MicroPython 1.13, and contains some subtle
 # but breaking changes. See also https://github.com/peterhinch/micropython-async/blob/master/v3/README.md
@@ -504,7 +504,7 @@ class webserver:
                     f"Failed to send error after HTTPException. Original error: {e}"
                 )
         except Exception as e:
-            # Unhandled expection in user's method
+            # Unhandled exception in user's method
             log.error(req.path.decode())
             log.exception(f"Unhandled exception in user's method. Original error: {e}")
             try:

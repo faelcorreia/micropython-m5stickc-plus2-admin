@@ -1,7 +1,7 @@
 from micropython import const  # type: ignore
 import io
 import sys
-import time
+import libs.time as time
 
 CRITICAL = const(50)
 ERROR = const(40)
@@ -58,7 +58,6 @@ class Handler:
 
 class StreamHandler(Handler):
     def __init__(self, stream=None):
-        super().__init__()
         self.stream = _stream if stream is None else stream
         self.terminator = "\n"
 

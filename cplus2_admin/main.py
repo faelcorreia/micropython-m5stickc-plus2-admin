@@ -6,6 +6,12 @@ from libs.wlancontroller import WLANController
 from libs.webcontroller import WebController
 from libs.buttoncontroller import ButtonController
 from libs.ledcontroller import LEDController
+import libs.logging as logging
+
+logging.basicConfig(
+    level=logging.INFO, format="%(name)s %(asctime)s %(levelname)s %(message)s"
+)
+logger: logging.Logger = logging.getLogger("main")
 
 
 class Admin:
@@ -102,8 +108,8 @@ class Admin:
 
 if __name__ == "__main__":
     admin = Admin()
-    print("Program started.")
-    print("Initializing infinite loop...\n")
+    logger.info("Program started.")
+    logger.info("Initializing infinite loop...\n")
     while True:
         # Process events from Button A
         admin.button_a_controller.process()

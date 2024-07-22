@@ -22,6 +22,7 @@
 
 import network  # type: ignore
 import time
+import libs.logging as logging
 
 
 class WLANController:
@@ -30,6 +31,7 @@ class WLANController:
     CONNECT_DELAY = 0.2
 
     def __init__(self) -> None:
+        self.logger: logging.Logger = logging.getLogger("wlancontroller")
         self.sta_if = network.WLAN(network.STA_IF)
         self.sta_if.active(True)
         self.ap_if = network.WLAN(network.AP_IF)
@@ -67,7 +69,7 @@ class WLANController:
     def connect(self, ssid, password):
         if not self.sta_if.isconnected():
             self.sta_ssid = ssid
-            print("Connecting to WLAN...\n")
+            self.logger.info("Connecting to WLAN...\n")
             self.sta_if.connect(ssid, password)
             retries = self.CONNECT_TIMEOUT / self.CONNECT_DELAY
             for _ in range(retries):
@@ -76,17 +78,19 @@ class WLANController:
                     break
                 time.sleep(self.CONNECT_DELAY)
             if connected:
-                print("Connected. Network config: ", self.sta_if.ifconfig())
+                self.logger.info(
+                    f"Connected. Network config: {str(self.sta_if.ifconfig())}"
+                )
                 return True
         return False
 
     def disconnect(self):
         if self.sta_if.isconnected():
-            print("Disconnecting from WLAN...\n")
+            self.logger.info("Disconnecting from WLAN...\n")
             self.sta_if.disconnect()
         retries = self.CONNECT_TIMEOUT / self.CONNECT_DELAY
         for _ in range(retries):
             if not self.sta_if.isconnected():
                 break
             time.sleep(self.CONNECT_DELAY)
-        print("Disconnected.")
+        self.logger.info("Disconnected.")
