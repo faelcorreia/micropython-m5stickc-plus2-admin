@@ -37,12 +37,37 @@
             display: block;
             border: 2px white solid;
         }
+
+        input[type="file"] {
+            display: none;
+        }
     </style>
     <script>
+        wlans = null;
+
         const headers = {
             "Content-Type": "application/json"
+        };
+
+        function getBase64File(file, callback) {
+            var reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function () {
+                callback(reader.result)
+            };
+            reader.onerror = function (error) {
+                console.log('Error: ', error);
+            };
         }
-        wlans = null;
+
+        function uploadFile() {
+            document.getElementById("bgImage").click();
+        }
+
+        function setFileName() {
+            file = document.getElementById("bgImage").files[0]
+            document.getElementById("selectedFileName").innerText = file["name"]
+        }
 
         async function doFetch(url, method, body) {
             //url = "http://192.168.100.38:8081" + url;
@@ -135,6 +160,18 @@
             await post("/api/display/background/color", { r: r, g: g, b: b });
         }
 
+        async function setDisplayBackgroundImage() {
+            input = document.getElementById("bgImage").files[0];
+            getBase64File(input, setDisplayBackgroundImageWithBase64Image);
+        }
+
+        async function setDisplayBackgroundImageWithBase64Image(base64Image) {
+            file = {
+                "file": base64Image
+            };
+            post("/api/display/background/image", file);
+        }
+
         async function setDisplayForegroundColor() {
             r = parseInt(document.getElementById("fgR").value);
             g = parseInt(document.getElementById("fgG").value);
@@ -204,6 +241,13 @@
             G <input id="bgG" type="number" min="1" max="255" value="0">
             B <input id="bgB" type="number" min="1" max="255" value="0">
             <button onclick="setDisplayBackgroundColor()">Set</button>
+
+            <h2># Background image</h2>
+            BMP image with dimension of <strong>240x135</strong> and <strong>16 or 24 bit</strong> depth<br><br>
+            <button onclick="uploadFile()">Upload</button>
+            <span id="selectedFileName"></span>
+            <input id="bgImage" type="file" onchange="setFileName()" />
+            <button onclick="setDisplayBackgroundImage()">Set</button>
 
             <h2># Foreground color</h2>
             R <input id="fgR" type="number" min="1" max="255" value="0">
@@ -282,7 +326,6 @@
                 }
                 try {
                     rotation = await getRotation();
-                    console.log('Rotation data updated:', rotation);
                 }
                 catch (e) {
                     console.log('Rotation not updated:', e);
@@ -297,7 +340,6 @@
                 }
                 try {
                     acceleration = await getAcceleration();
-                    console.log('Acceleration data updated:', acceleration);
                 }
                 catch (e) {
                     console.log('Acceleration not updated:', e);
@@ -312,7 +354,6 @@
                 }
                 try {
                     temperature = await getTemperature();
-                    console.log('Temperature data updated:', temperature);
                 }
                 catch (e) {
                     console.log('Temperature not updated:', e);

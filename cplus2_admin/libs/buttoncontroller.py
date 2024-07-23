@@ -26,7 +26,7 @@ import libs.logging as logging
 
 class ButtonController:
     def __init__(self, button: Pin, name) -> None:
-        self.logger: logging.Logger = logging.getLogger("buttoncontroller")
+        self.logger: logging.Logger = logging.getLogger("BUTTONCONTROLLER")
         self.button = button
         self.name = name
         self.events = {"on_release": [], "on_down": [], "on_press": [], "on_up": []}

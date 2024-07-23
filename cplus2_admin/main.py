@@ -7,11 +7,13 @@ from libs.webcontroller import WebController
 from libs.buttoncontroller import ButtonController
 from libs.ledcontroller import LEDController
 import libs.logging as logging
+import gc
+import os
 
 logging.basicConfig(
     level=logging.INFO, format="%(name)s %(asctime)s %(levelname)s %(message)s"
 )
-logger: logging.Logger = logging.getLogger("main")
+logger: logging.Logger = logging.getLogger("MAIN")
 
 
 class Admin:
@@ -62,7 +64,7 @@ class Admin:
         reset=Pin(12, Pin.OUT),
         dc=Pin(14, Pin.OUT),
         cs=Pin(5, Pin.OUT),
-        buf=bytearray(4096),
+        buf=bytearray(64800),  # Image size: 240x135x2
         color_mode=ColorMode_16bit,
     )
     display.change_orientation("RLANDSCAPE")
@@ -109,7 +111,20 @@ class Admin:
 if __name__ == "__main__":
     admin = Admin()
     logger.info("Program started.")
-    logger.info("Initializing infinite loop...\n")
+    mem_alloc = gc.mem_alloc()
+    mem_free = gc.mem_free()
+
+    statvfs = os.statvfs(".")
+    total_space = statvfs[1] * statvfs[2]
+    free_space = statvfs[1] * statvfs[3]
+
+    logger.info(
+        f"RAM used: {mem_alloc}/{mem_alloc + mem_free} bytes ({((mem_alloc/(mem_alloc + mem_free))*100):.2f}%)"
+    )
+    logger.info(
+        f"Flash used: {total_space-free_space}/{total_space} bytes ({(((total_space-free_space)/total_space)*100):.2f}%)"
+    )
+    logger.info("Initializing infinite loop...")
     while True:
         # Process events from Button A
         admin.button_a_controller.process()

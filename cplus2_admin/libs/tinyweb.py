@@ -14,7 +14,7 @@ import uerrno as errno  # type: ignore
 import usocket as socket  # type: ignore
 
 
-log = logging.getLogger("WEB")
+log = logging.getLogger("TINYWEB")
 
 type_gen = type((lambda: (yield))())
 
@@ -384,6 +384,7 @@ async def restful_resource_handler(req, resp, param=None):
 
 
 class webserver:
+    DEFAULT_MAX_BODY_SIZE = 1024
 
     def __init__(self, request_timeout=3, max_concurrency=3, backlog=16, debug=False):
         """Tiny Web Server class.
@@ -543,7 +544,7 @@ class webserver:
         params = {
             "methods": ["GET"],
             "save_headers": [],
-            "max_body_size": 1024,
+            "max_body_size": self.DEFAULT_MAX_BODY_SIZE,
             "allowed_access_control_headers": "*",
             "allowed_access_control_origins": "*",
         }
@@ -567,7 +568,7 @@ class webserver:
             raise ValueError("URL exists")
         self.explicit_url_map[url.encode()] = (f, params)
 
-    def add_resource(self, cls, url, **kwargs):
+    def add_resource(self, cls, url, max_body_size=DEFAULT_MAX_BODY_SIZE, **kwargs):
         """Map resource (RestAPI) to URL
 
         Arguments:
@@ -601,6 +602,7 @@ class webserver:
             restful_resource_handler,
             methods=methods,
             save_headers=["Content-Length", "Content-Type"],
+            max_body_size=max_body_size,
             _callmap=callmap,
         )
 
@@ -617,7 +619,7 @@ class webserver:
         params = {
             "methods": [b"GET"],
             "save_headers": [],
-            "max_body_size": 1024,
+            "max_body_size": self.DEFAULT_MAX_BODY_SIZE,
             "allowed_access_control_headers": "*",
             "allowed_access_control_origins": "*",
         }

@@ -33,6 +33,7 @@ import os
 import libs.tinyweb as tinyweb
 from libs.tinyweb import response, request
 import libs.logging as logging
+from libs.bitmap import Bitmap
 
 class Config():
     def __init__(self, config_path):
@@ -68,8 +69,8 @@ class WebController:
         sensor: MPU6886,
         rtc: PCF8563,
     ) -> None:
-        self.logger: logging.Logger = logging.getLogger("webcontroller")
-        self.app = tinyweb.webserver()
+        self.logger: logging.Logger = logging.getLogger("WEBCONTROLLER")
+        self.app = tinyweb.webserver(debug=True, request_timeout=10)
         
         self.wlancontroller = wlancontroller
         self.ledcontroller = ledcontroller
@@ -99,8 +100,9 @@ class WebController:
         # LCD Parameters
         self.display
         self.display_parameters = {
-            "background" : colors.BLACK,
-            "foreground" : colors.WHITE,
+            "background_color" : colors.BLACK,
+            "foreground_color" : colors.WHITE,
+            "background_image" : None,
             "text_x" : self.DEFAULT_TEXT_X,
             "text_y" : self.DEFAULT_TEXT_Y
         }
@@ -108,20 +110,20 @@ class WebController:
         # Start default screen
         ap_info = wlancontroller.get_ap_info()
         self.backlight.on()
-        self.display.fill(self.display_parameters["background"])
+        self.display.fill(self.display_parameters["background_color"])
         display.text(
             f"AP SSID: {ap_info["ssid"]}",
             self.DEFAULT_TEXT_X,
             self.DEFAULT_TEXT_Y,
-            self.display_parameters["foreground"],
-            self.display_parameters["background"],
+            self.display_parameters["foreground_color"],
+            self.display_parameters["background_color"],
         )
         display.text(
             f"AP IP: {ap_info["ip"]}",
             self.DEFAULT_TEXT_X,
             self.DEFAULT_TEXT_Y + 10,
-            self.display_parameters["foreground"],
-            self.display_parameters["background"],
+            self.display_parameters["foreground_color"],
+            self.display_parameters["background_color"],
         )
 
         # Define routes
@@ -133,6 +135,7 @@ class WebController:
         self.app.add_resource(WebController.RTC, "/api/rtc", rtc=self.rtc)
         self.app.add_resource(WebController.DisplayBacklight, "/api/display/backlight/toggle", backlight=self.backlight)
         self.app.add_resource(WebController.DisplayBackgroundColor, "/api/display/background/color", display=self.display, display_parameters=self.display_parameters)
+        self.app.add_resource(WebController.DisplayBackgroundImage, "/api/display/background/image", max_body_size=200000, display=self.display, display_parameters=self.display_parameters)
         self.app.add_resource(WebController.DisplayForegroundColor, "/api/display/foreground/color", display_parameters=self.display_parameters)
         self.app.add_resource(WebController.DisplayText, "/api/display/text", display=self.display, display_parameters=self.display_parameters)
         self.app.add_resource(WebController.SensorTemperature, "/api/sensor/temperature", sensor=self.sensor)
@@ -236,20 +239,32 @@ class WebController:
         
     class DisplayBackgroundColor:
         def post(self, data, display: ST7789, display_parameters: dict):
-            display_parameters["background"] = colors.rgb565(data["r"], data["g"], data["b"])
-            display.fill(display_parameters["background"])
+            display_parameters["background_color"] = colors.rgb565(data["r"], data["g"], data["b"])
+            display.fill(display_parameters["background_color"])
+            display_parameters["background_image"] = None
             return {"message" : "Background color changed.", "result": None}
+        
+    class DisplayBackgroundImage:
+        def post(self, data, display: ST7789, display_parameters: dict):
+            bitmap_base64 = data["file"]
+            pixels = Bitmap.extract_pixels_from_base64bitmap(bitmap_base64)
+            display.image(pixels)
+            display_parameters["background_image"] = pixels
+            return {"message" : "Background image changed.", "result": None}
         
     class DisplayForegroundColor:
         def post(self, data, display_parameters: dict):
-            display_parameters["foreground"] = colors.rgb565(data["r"], data["g"], data["b"])
+            display_parameters["foreground_color"] = colors.rgb565(data["r"], data["g"], data["b"])
             return {"message": "Foreground color changed.", "result": None}
         
     class DisplayText:
         def post(self, data, display: ST7789, display_parameters: dict):
-            display.fill(display_parameters["background"])
+            if display_parameters["background_image"]:
+                display.image(display_parameters["background_image"])
+            else:
+                display.fill(display_parameters["background_color"])
             display.text(
-                data["text"], display_parameters["text_x"], display_parameters["text_y"], display_parameters["foreground"], display_parameters["background"]
+                data["text"], display_parameters["text_x"], display_parameters["text_y"], display_parameters["foreground_color"], display_parameters["background_color"]
             )
             return {"message" : "Text written.", "result": None}
     

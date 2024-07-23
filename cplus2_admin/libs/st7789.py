@@ -24,6 +24,7 @@
 #
 # Notable modifications:
 #   - Created method to rotate screen
+#   - Created method to draw bitmap
 """
 Driver for the ST7789 display controller.
 """
@@ -345,3 +346,15 @@ class ST7789:
         f.fill(self._to_be16(bg))
         f.text(s, 0, 0, self._to_be16(fg))
         self.blit_buffer(self.buf[:text_mem], x, y, text_width, _FONT_HEIGHT)
+
+    def image(self, pixels: list[int]):
+        image_mem = len(pixels) * _PIXEL_LEN
+        if image_mem > len(self.buf):
+            raise ValueError("buffer too small")
+
+        f = framebuf.FrameBuffer(self.buf, self.width, self.height, framebuf.RGB565)
+        for y in range(self.height):
+            for x in range(self.width):
+                f.pixel(x, y, self._to_be16(pixels[(y * self.width) + x]))
+
+        self.blit_buffer(self.buf[:image_mem], 0, 0, self.width, self.height)

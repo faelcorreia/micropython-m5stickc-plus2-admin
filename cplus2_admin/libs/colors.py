@@ -21,7 +21,7 @@
 #
 # Based on https://github.com/devbis/st7789py_mpy
 
-from micropython import const # type: ignore
+from micropython import const  # type: ignore
 
 BLACK = const(0x0000)
 BLUE = const(0x001F)
@@ -39,4 +39,4 @@ def rgb565(r, g=0, b=0):
         r, g, b = r  # see if the first var is a tuple/list
     except TypeError:
         pass
-    return (r & 0xf8) << 8 | (g & 0xfc) << 3 | b >> 3
+    return (r & 0xF8) << 8 | (g & 0xFC) << 3 | b >> 3
