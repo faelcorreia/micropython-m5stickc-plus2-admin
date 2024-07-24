@@ -1,39 +1,24 @@
-# Copyright (c) 2024 Rafael Correia
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
-#
-# https://github.com/faelcorreia/micropython-m5stickc-plus2-admin
+"""
+MIT license
+Copyright (c) 2024 Rafael Correia
+https://github.com/faelcorreia/micropython-m5stickc-plus2-admin
+"""
 
-from libs.wlancontroller import WLANController
-from libs.ledcontroller import LEDController
+from libs.audio.buzzercontroller import BuzzerController
+from libs.network.wlancontroller import WLANController
+from libs.led.ledcontroller import LEDController
 import binascii
 import json
-from machine import Pin # type: ignore
-from libs.st7789 import ST7789
-from libs.mpu6886 import MPU6886
-from libs.pcf8563 import PCF8563
-import libs.colors as colors
+from machine import Pin, PWM # type: ignore
+from libs.display.st7789 import ST7789
+from libs.sensor.mpu6886 import MPU6886
+from libs.rtc.pcf8563 import PCF8563
+import libs.display.colors as colors
 import os
-import libs.tinyweb as tinyweb
-from libs.tinyweb import response, request
-import libs.logging as logging
-from libs.bitmap import Bitmap
+import libs.network.tinyweb as tinyweb
+from libs.network.tinyweb import response, request
+import libs.std.logging as logging
+from libs.display.bitmap import Bitmap
 
 class Config():
     def __init__(self, config_path):
@@ -68,6 +53,7 @@ class WebController:
         display: ST7789,
         sensor: MPU6886,
         rtc: PCF8563,
+        buzzercontroller: BuzzerController
     ) -> None:
         self.logger: logging.Logger = logging.getLogger("WEBCONTROLLER")
         self.app = tinyweb.webserver(debug=True, request_timeout=10)
@@ -78,6 +64,7 @@ class WebController:
         self.display = display
         self.sensor = sensor
         self.rtc = rtc
+        self.buzzercontroller = buzzercontroller
         
         # Create data folder
         try:
@@ -142,9 +129,10 @@ class WebController:
         self.app.add_resource(WebController.SensorRotation, "/api/sensor/rotation", sensor=self.sensor)
         self.app.add_resource(WebController.SensorAcceleration, "/api/sensor/acceleration", sensor=self.sensor)
         self.app.add_resource(WebController.LED, "/api/led/toggle", ledcontroller=self.ledcontroller)
+        self.app.add_resource(WebController.Buzzer, "/api/buzzer", buzzercontroller=self.buzzercontroller)
 
     def start(self):
-        self.app.run(host='0.0.0.0', port=8081, loop_forever=False)
+        self.app.run(host='0.0.0.0', port=80, loop_forever=False)
         
     async def stop_coro(self):
         self.app.loop.stop()
@@ -297,3 +285,16 @@ class WebController:
             del data
             ledcontroller.toggle()
             return {"message": "LED toggled.", "result": None}
+        
+    class Buzzer:
+        def post(self, data, buzzercontroller: BuzzerController):
+            bpm: int = data["bpm"]
+            step: int = data["step"]
+            notes: list[str] = data["notes"]
+            try:
+                buzzercontroller.play_notes(bpm, step, notes)
+                return {"message" : "Notes played.", "result": None}
+            except Exception as e:
+                return {"message" : f"Exception while playing notes: {str(e)}.", "result": None}
+                
+            

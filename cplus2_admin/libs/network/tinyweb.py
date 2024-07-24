@@ -4,7 +4,7 @@ MIT license
 (C) Konstantin Belyalov 2017-2018
 """
 
-import libs.logging as logging
+import libs.std.logging as logging
 import asyncio
 import ujson as json  # type: ignore
 import gc

@@ -19,8 +19,11 @@
         }
 
         button,
-        input {
+        input,
+        textarea {
             border: 2px solid white;
+            background-color: black;
+            color: white;
         }
 
         button:active {
@@ -70,7 +73,7 @@
         }
 
         async function doFetch(url, method, body) {
-            //url = "http://192.168.100.38:8081" + url;
+            //url = "http://192.168.100.38" + url;
             response = await fetch(url, {
                 method: method,
                 body: body,
@@ -203,6 +206,14 @@
             await get("/api/led/toggle")
         }
 
+        async function playNotes() {
+            notes_text = document.getElementById("notes").value
+            notes = notes_text.split(/[ \n]+/)
+            bpm = parseInt(document.getElementById("bpm").value)
+            step = parseInt(document.getElementById("step").value)
+            await post("/api/buzzer", { bpm: bpm, step: step, notes: notes })
+        }
+
         function onLoad() {
             getApInfo()
             getStaInfo()
@@ -285,7 +296,30 @@
             <button onclick="setRTCTime()">Set</button>
         </details>
     </div>
-    <hr>
+    <hr />
+    <div>
+        <details>
+            <summary>Buzzer</summary>
+            <br>
+            BPM <input id="bpm" type="number" min="1" max="400" value="97">
+            Step 1/<input id="step" type="number" min="1" max="32" value="16">
+            <br><br>
+            Notes <textarea id="notes">E4 E4 _ E4 _ C4 E4 _ G4 _ _ _ G3 ~</textarea>
+            <button onclick="playNotes()">Play</button>
+            <br>
+            <pre>
+Allowed values:
+
+- Notes: [key][modifier]?[octave]
+    - key: A, B, C, D, E, F, G
+    - modifier: #, b
+    - octave: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+- Pause: [-]
+- Extension: [~] 
+            </pre>
+        </details>
+    </div>
+    <hr />
     <div>
         <details>
             <summary>Sensor</summary>

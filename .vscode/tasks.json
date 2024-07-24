@@ -10,12 +10,12 @@
 		{
 			"label": "copy",
 			"type": "shell",
-			"command": "rshell --port ${PORT} --baud ${BAUDRATE} cp -r cplus2_admin/* /pyboard"
+			"command": "rshell --port ${PORT} --baud ${BAUDRATE} cp -r 'cplus2_admin/*' '/pyboard'"
 		},
 		{
 			"label": "clear",
 			"type": "shell",
-			"command": "rshell --port ${PORT} --baud ${BAUDRATE} rm -r /pyboard/*"
+			"command": "rshell --port ${PORT} --baud ${BAUDRATE} rm -r '/pyboard/*'"
 		},
 		{
 			"label": "run",
@@ -28,7 +28,7 @@
 		{
 			"label": "list",
 			"type": "shell",
-			"command": "rshell --port ${PORT} --baud ${BAUDRATE} ls /pyboard/*"
+			"command": "rshell --port ${PORT} --baud ${BAUDRATE} ls '/pyboard/*'"
 		},
 		{
 			"label": "repl",

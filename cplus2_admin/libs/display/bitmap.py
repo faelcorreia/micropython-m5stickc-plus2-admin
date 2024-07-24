@@ -1,6 +1,12 @@
+"""
+MIT license
+Copyright (c) 2024 Rafael Correia
+https://github.com/faelcorreia/micropython-m5stickc-plus2-admin
+"""
+
 import struct
 import ubinascii  # type: ignore
-import libs.colors as colors
+import libs.display.colors as colors
 
 
 class Bitmap:
