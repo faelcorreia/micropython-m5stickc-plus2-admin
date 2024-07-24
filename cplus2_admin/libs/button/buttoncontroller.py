@@ -21,7 +21,7 @@
 # https://github.com/faelcorreia/micropython-m5stickc-plus2-admin
 
 from machine import Pin  # type: ignore
-import libs.logging as logging
+import libs.std.logging as logging
 
 
 class ButtonController:

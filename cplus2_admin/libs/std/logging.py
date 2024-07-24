@@ -1,7 +1,7 @@
 from micropython import const  # type: ignore
 import io
 import sys
-import libs.time as time
+import libs.std.time as time
 
 CRITICAL = const(50)
 ERROR = const(40)

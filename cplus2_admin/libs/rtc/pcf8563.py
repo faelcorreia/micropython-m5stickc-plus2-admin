@@ -27,7 +27,7 @@
 """
 Driver for the PCF8563/BM8563 real-time clock module.
 """
-from micropython import const
+from micropython import const # type: ignore
 
 _PCF8563_I2C_DEFAULT_ADDR = const(0x51)
 

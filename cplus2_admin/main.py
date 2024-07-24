@@ -1,12 +1,12 @@
 from machine import I2C, Pin, SPI, ADC  # type: ignore
-from libs.st7789 import ST7789, ColorMode_16bit
-from libs.pcf8563 import PCF8563
-from libs.mpu6886 import MPU6886, SF_G, SF_DEG_S
-from libs.wlancontroller import WLANController
-from libs.webcontroller import WebController
-from libs.buttoncontroller import ButtonController
-from libs.ledcontroller import LEDController
-import libs.logging as logging
+from libs.display.st7789 import ST7789, ColorMode_16bit
+from libs.rtc.pcf8563 import PCF8563
+from libs.sensor.mpu6886 import MPU6886, SF_G, SF_DEG_S
+from libs.network.wlancontroller import WLANController
+from libs.network.webcontroller import WebController
+from libs.button.buttoncontroller import ButtonController
+from libs.led.ledcontroller import LEDController
+import libs.std.logging as logging
 import gc
 import os
 

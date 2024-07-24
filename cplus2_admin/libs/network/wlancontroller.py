@@ -22,7 +22,7 @@
 
 import network  # type: ignore
 import time
-import libs.logging as logging
+import libs.std.logging as logging
 
 
 class WLANController:

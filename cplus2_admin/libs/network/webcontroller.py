@@ -20,20 +20,20 @@
 #
 # https://github.com/faelcorreia/micropython-m5stickc-plus2-admin
 
-from libs.wlancontroller import WLANController
-from libs.ledcontroller import LEDController
+from libs.network.wlancontroller import WLANController
+from libs.led.ledcontroller import LEDController
 import binascii
 import json
 from machine import Pin # type: ignore
-from libs.st7789 import ST7789
-from libs.mpu6886 import MPU6886
-from libs.pcf8563 import PCF8563
-import libs.colors as colors
+from libs.display.st7789 import ST7789
+from libs.sensor.mpu6886 import MPU6886
+from libs.rtc.pcf8563 import PCF8563
+import libs.display.colors as colors
 import os
-import libs.tinyweb as tinyweb
-from libs.tinyweb import response, request
-import libs.logging as logging
-from libs.bitmap import Bitmap
+import libs.network.tinyweb as tinyweb
+from libs.network.tinyweb import response, request
+import libs.std.logging as logging
+from libs.display.bitmap import Bitmap
 
 class Config():
     def __init__(self, config_path):
@@ -144,7 +144,7 @@ class WebController:
         self.app.add_resource(WebController.LED, "/api/led/toggle", ledcontroller=self.ledcontroller)
 
     def start(self):
-        self.app.run(host='0.0.0.0', port=8081, loop_forever=False)
+        self.app.run(host='0.0.0.0', port=80, loop_forever=False)
         
     async def stop_coro(self):
         self.app.loop.stop()

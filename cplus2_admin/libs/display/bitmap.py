@@ -1,6 +1,6 @@
 import struct
 import ubinascii  # type: ignore
-import libs.colors as colors
+import libs.display.colors as colors
 
 
 class Bitmap:
