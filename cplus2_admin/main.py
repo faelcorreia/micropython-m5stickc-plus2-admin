@@ -1,4 +1,4 @@
-from machine import I2C, Pin, SPI, ADC  # type: ignore
+from machine import I2C, Pin, SPI, ADC, PWM  # type: ignore
 from libs.display.st7789 import ST7789, ColorMode_16bit
 from libs.rtc.pcf8563 import PCF8563
 from libs.sensor.mpu6886 import MPU6886, SF_G, SF_DEG_S
@@ -6,6 +6,7 @@ from libs.network.wlancontroller import WLANController
 from libs.network.webcontroller import WebController
 from libs.button.buttoncontroller import ButtonController
 from libs.led.ledcontroller import LEDController
+from libs.audio.buzzercontroller import BuzzerController
 import libs.std.logging as logging
 import gc
 import os
@@ -72,15 +73,33 @@ class Admin:
     # Set up MPU6886 Sensor
     sensor = MPU6886(i2c, accel_sf=SF_G, gyro_sf=SF_DEG_S)
 
-    def __init__(self) -> None:
-        self.create_led_controller()
-        self.create_network()
-        self.create_button_controllers()
+    # Set up M5StickC Plus2 Buzzer
+    buzzer = PWM(Pin(2, Pin.OUT), duty=0)
+    buzzer.deinit()
 
-    def create_led_controller(self):
+    def __init__(self) -> None:
+        # Create LED Controller
         self.ledcontroller = LEDController(self.led)
 
-    def create_button_controllers(self):
+        # Create Buzzer Controller
+        self.buzzercontroller = BuzzerController(self.buzzer)
+
+        # Create network
+        self.wlancontroller = WLANController()
+        self.wlancontroller.configure_ap()
+
+        self.webcontroller = WebController(
+            self.wlancontroller,
+            self.ledcontroller,
+            self.backlight,
+            self.display,
+            self.sensor,
+            self.rtc,
+            self.buzzercontroller,
+        )
+        self.webcontroller.start()
+
+        # Create Button Controllers
         self.button_a_controller = ButtonController(self.button_a, "Button A")
         self.button_a_controller.register_event("on_press", self.ledcontroller.on)
         self.button_a_controller.register_event("on_release", self.ledcontroller.off)
@@ -92,20 +111,6 @@ class Admin:
         self.button_c_controller = ButtonController(self.button_c, "Button C")
         self.button_c_controller.register_event("on_press", self.ledcontroller.on)
         self.button_c_controller.register_event("on_release", self.ledcontroller.off)
-
-    def create_network(self):
-        self.wlancontroller = WLANController()
-        self.wlancontroller.configure_ap()
-
-        self.webcontroller = WebController(
-            self.wlancontroller,
-            self.ledcontroller,
-            self.backlight,
-            self.display,
-            self.sensor,
-            self.rtc,
-        )
-        self.webcontroller.start()
 
 
 if __name__ == "__main__":
