@@ -39,6 +39,24 @@
 			"label": "shell",
 			"type": "shell",
 			"command": "rshell --port ${PORT} --baud ${BAUDRATE}"
+		},
+		{
+			"label": "copy-mpremote",
+			"type": "shell",
+			"command": "mpremote connect ${PORT} cp -r 'cplus2_admin/*' :"
+		},
+		{
+			"label": "run-mpremote",
+			"type": "shell",
+			"command": "mpremote connect ${PORT} reset",
+			"dependsOn": [
+				"copy-mpremote"
+			]
+		},
+		{
+			"label": "repl-mpremote",
+			"type": "shell",
+			"command": "mpremote connect ${PORT} repl"
 		}
 	]
 }

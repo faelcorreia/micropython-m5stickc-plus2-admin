@@ -1,6 +1,6 @@
 """
 MIT license
-Copyright (c) 2024 Rafael Correia
+Copyright (c) 2024-2026 Rafael Correia
 https://github.com/faelcorreia/micropython-m5stickc-plus2-admin
 """
 
@@ -11,6 +11,9 @@ import libs.std.logging as logging
 
 class WLANController:
     AP_SSID = "M5StickC"
+    # Set a password with at least 8 characters to protect the admin page.
+    # Leaving it as None keeps the access point open, like previous versions.
+    AP_PASSWORD = None
     CONNECT_TIMEOUT = 30
     CONNECT_DELAY = 0.2
 
@@ -26,7 +29,14 @@ class WLANController:
         return available
 
     def configure_ap(self):
-        self.ap_if.config(essid=self.AP_SSID)
+        if self.AP_PASSWORD:
+            self.ap_if.config(
+                essid=self.AP_SSID,
+                password=self.AP_PASSWORD,
+                authmode=network.AUTH_WPA_WPA2_PSK,
+            )
+        else:
+            self.ap_if.config(essid=self.AP_SSID)
 
     def get_ap_info(self) -> dict[str, str]:
         ap_info = self.ap_if.ifconfig()
@@ -39,40 +49,46 @@ class WLANController:
         }
 
     def get_sta_info(self):
-        if self.sta_if.isconnected():
-            sta_info = self.sta_if.ifconfig()
-            return {
-                "ssid": self.sta_ssid,
-                "ip": sta_info[0],
-                "netmask": sta_info[1],
-                "dns1": sta_info[2],
-                "dns2": sta_info[3],
-            }
-        return None
-
-    def connect(self, ssid, password):
         if not self.sta_if.isconnected():
-            self.sta_ssid = ssid
-            self.logger.info("Connecting to WLAN...")
+            return None
+        sta_info = self.sta_if.ifconfig()
+        return {
+            "ssid": self.sta_if.config("essid"),
+            "ip": sta_info[0],
+            "netmask": sta_info[1],
+            "dns1": sta_info[2],
+            "dns2": sta_info[3],
+        }
+
+    def connect(self, ssid, password=None):
+        if self.sta_if.isconnected():
+            if self.sta_if.config("essid") == ssid:
+                return True
+            self.disconnect()
+
+        self.logger.info("Connecting to WLAN...")
+        if password:
             self.sta_if.connect(ssid, password)
-            retries = self.CONNECT_TIMEOUT / self.CONNECT_DELAY
-            for _ in range(retries):
-                connected = self.sta_if.isconnected()
-                if connected:
-                    break
-                time.sleep(self.CONNECT_DELAY)
-            if connected:
+        else:
+            self.sta_if.connect(ssid)
+
+        retries = int(self.CONNECT_TIMEOUT / self.CONNECT_DELAY)
+        for _ in range(retries):
+            if self.sta_if.isconnected():
                 self.logger.info(
                     f"Connected. Network config: {str(self.sta_if.ifconfig())}"
                 )
                 return True
+            time.sleep(self.CONNECT_DELAY)
+
+        self.logger.warning(f"Could not connect to WLAN {ssid}.")
         return False
 
     def disconnect(self):
         if self.sta_if.isconnected():
-            self.logger.info("Disconnecting from WLAN...\n")
+            self.logger.info("Disconnecting from WLAN...")
             self.sta_if.disconnect()
-        retries = self.CONNECT_TIMEOUT / self.CONNECT_DELAY
+        retries = int(self.CONNECT_TIMEOUT / self.CONNECT_DELAY)
         for _ in range(retries):
             if not self.sta_if.isconnected():
                 break

@@ -77,6 +77,11 @@ _GYRO_SO_2000DPS = 16.4
 _TEMP_SO = 326.8
 _TEMP_OFFSET = 25
 
+# Digital low-pass filter: 44 Hz for the accelerometer, 42 Hz for the gyro.
+# Polling happens well below these frequencies, so this mostly removes noise
+# without adding noticeable latency to the orientation estimate.
+_DLPF_CFG_44HZ = const(0x03)
+
 SF_G = 1
 SF_M_S2 = 9.80665 # 1 g = 9.80665 m/s2 ie. standard gravity
 SF_DEG_S = 1
@@ -99,6 +104,10 @@ class MPU6886:
         self._register_char(_PWR_MGMT_1, 0b10000000) # reset
         utime.sleep_ms(100)
         self._register_char(_PWR_MGMT_1, 0b00000001) # autoselect clock
+
+        # Enable the digital low-pass filters to reduce gyro/accel noise.
+        self._register_char(_CONFIG, _DLPF_CFG_44HZ)
+        self._register_char(_ACCEL_CONFIG2, _DLPF_CFG_44HZ)
 
         self._accel_so = self._accel_fs(accel_fs)
         self._gyro_so = self._gyro_fs(gyro_fs)
@@ -152,6 +161,41 @@ class MPU6886:
         """ Value of the whoami register. """
         return self._register_char(_WHO_AM_I)
 
+    def sample(self):
+        """
+        Read acceleration, gyro and temperature in a single I2C transaction.
+
+        Returns a tuple ``(acceleration, gyro, temperature)`` using the same
+        units as the individual properties. Reading everything at once keeps
+        the three values consistent with each other.
+        """
+        buf = bytearray(14)
+        self.i2c.readfrom_mem_into(self.address, _ACCEL_XOUT_H, buf)
+        ax, ay, az, temp, gx, gy, gz = ustruct.unpack(">hhhhhhh", buf)
+
+        accel_so = self._accel_so
+        accel_sf = self._accel_sf
+        gyro_so = self._gyro_so
+        gyro_sf = self._gyro_sf
+        ox, oy, oz = self._gyro_offset
+
+        acceleration = (
+            ax / accel_so * accel_sf,
+            ay / accel_so * accel_sf,
+            az / accel_so * accel_sf,
+        )
+        gyro = (
+            gx / gyro_so * gyro_sf - ox,
+            gy / gyro_so * gyro_sf - oy,
+            gz / gyro_so * gyro_sf - oz,
+        )
+        temperature = (temp / _TEMP_SO) + _TEMP_OFFSET
+        return acceleration, gyro, temperature
+
+    def set_gyro_offset(self, offset):
+        """Set the gyro zero-rate offset as a 3-tuple in the current units."""
+        self._gyro_offset = tuple(offset)
+
     def calibrate(self, count=256, delay=0):
         ox, oy, oz = (0.0, 0.0, 0.0)
         self._gyro_offset = (0.0, 0.0, 0.0)
@@ -185,7 +229,7 @@ class MPU6886:
             self.i2c.readfrom_mem_into(self.address, register, buf)
             return buf[0]
 
-        ustruct.pack_into("<b", buf, 0, value)
+        ustruct.pack_into("<B", buf, 0, value)
         return self.i2c.writeto_mem(self.address, register, buf)
 
     def _accel_fs(self, value):
