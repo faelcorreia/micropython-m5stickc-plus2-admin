@@ -1,2 +1,4 @@
 .venv
 cplus2_admin/data
+__pycache__/
+*.pyc

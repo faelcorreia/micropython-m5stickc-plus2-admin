@@ -1,4 +1,4 @@
-from machine import I2C, Pin, SPI, ADC, PWM  # type: ignore
+from machine import I2C, Pin, SPI, PWM  # type: ignore
 from libs.display.st7789 import ST7789, ColorMode_16bit
 from libs.rtc.pcf8563 import PCF8563
 from libs.sensor.mpu6886 import MPU6886, SF_G, SF_DEG_S
@@ -7,6 +7,9 @@ from libs.network.webcontroller import WebController
 from libs.button.buttoncontroller import ButtonController
 from libs.led.ledcontroller import LEDController
 from libs.audio.buzzercontroller import BuzzerController
+from libs.audio.microphonecontroller import MicrophoneController
+from libs.power.batterycontroller import BatteryController
+from libs.system.systemcontroller import SystemController
 import libs.std.logging as logging
 import gc
 import os
@@ -18,11 +21,6 @@ logger: logging.Logger = logging.getLogger("MAIN")
 
 
 class Admin:
-    last_button_state = 0
-
-    adc = ADC(Pin(38, Pin.IN))
-    battery_uv = adc.read_uv()
-
     # Set up M5StickC Plus2 I2C
     i2c = I2C(0, sda=Pin(21), scl=Pin(22), freq=400000)
 
@@ -51,7 +49,8 @@ class Admin:
         phase=0,
         polarity=1,
         sck=Pin(13, Pin.OUT),
-        miso=Pin(4, Pin.IN),
+        # The ST7789 is write-only, so MISO is not needed. GPIO4 is the
+        # power-hold pin on the M5StickC Plus2 and must not be reused here.
         mosi=Pin(15, Pin.OUT),
     )
 
@@ -84,20 +83,14 @@ class Admin:
         # Create Buzzer Controller
         self.buzzercontroller = BuzzerController(self.buzzer)
 
-        # Create network
-        self.wlancontroller = WLANController()
-        self.wlancontroller.configure_ap()
+        # Create Microphone Controller (only available on custom PDM firmware)
+        self.microphonecontroller = MicrophoneController()
 
-        self.webcontroller = WebController(
-            self.wlancontroller,
-            self.ledcontroller,
-            self.backlight,
-            self.display,
-            self.sensor,
-            self.rtc,
-            self.buzzercontroller,
-        )
-        self.webcontroller.start()
+        # Create Battery Controller
+        self.batterycontroller = BatteryController()
+
+        # Create System Controller
+        self.systemcontroller = SystemController(self.batterycontroller)
 
         # Create Button Controllers
         self.button_a_controller = ButtonController(self.button_a, "Button A")
@@ -111,6 +104,32 @@ class Admin:
         self.button_c_controller = ButtonController(self.button_c, "Button C")
         self.button_c_controller.register_event("on_press", self.ledcontroller.on)
         self.button_c_controller.register_event("on_release", self.ledcontroller.off)
+
+        self.buttons = {
+            "a": self.button_a_controller,
+            "b": self.button_b_controller,
+            "c": self.button_c_controller,
+        }
+
+        # Create network
+        self.wlancontroller = WLANController()
+        self.wlancontroller.configure_ap()
+
+        self.webcontroller = WebController(
+            self.wlancontroller,
+            self.ledcontroller,
+            self.backlight,
+            self.display,
+            self.sensor,
+            self.rtc,
+            self.buzzercontroller,
+            microphonecontroller=self.microphonecontroller,
+            batterycontroller=self.batterycontroller,
+            systemcontroller=self.systemcontroller,
+            buttons=self.buttons,
+            i2c=self.i2c,
+        )
+        self.webcontroller.start()
 
 
 if __name__ == "__main__":
@@ -129,6 +148,10 @@ if __name__ == "__main__":
     logger.info(
         f"Flash used: {total_space-free_space}/{total_space} bytes ({(((total_space-free_space)/total_space)*100):.2f}%)"
     )
+    battery = admin.batterycontroller.read()
+    logger.info(
+        f"Battery: {battery['voltage']:.2f} V ({battery['percentage']}%)"
+    )
     logger.info("Initializing infinite loop...")
     while True:
         # Process events from Button A
@@ -139,6 +162,9 @@ if __name__ == "__main__":
 
         # Process events from Button C
         admin.button_c_controller.process()
+
+        # Advance buzzer playback without blocking the server
+        admin.buzzercontroller.process()
 
         # Process Web server requests
         admin.webcontroller.process()

@@ -206,10 +206,11 @@ def exception(msg, *args):
 
 
 def shutdown():
-    for k, logger in _loggers.items():
+    for name in list(_loggers.keys()):
+        logger = _loggers[name]
         for h in logger.handlers:
             h.close()
-        _loggers.pop(logger, None)
+        del _loggers[name]
 
 
 def addLevelName(level, name):

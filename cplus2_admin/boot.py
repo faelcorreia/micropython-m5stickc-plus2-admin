@@ -1,5 +1,4 @@
-from machine import Pin # type: ignore
+from machine import Pin  # type: ignore
 
-# Set up Hold PIN to keep device on after USB disconnect
-hold = Pin(4, Pin.IN, Pin.PULL_UP)
-hold.on()
+# Drive the power-hold pin high to keep the device on after USB disconnect.
+hold = Pin(4, Pin.OUT, value=1)
